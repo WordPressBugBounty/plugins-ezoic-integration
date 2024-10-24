@@ -151,15 +151,36 @@ if ( !function_exists( 'ez_ctype_space' ) ) {
  */
 if ( !function_exists( 'ez_encode_unicode' ) ) {
 	function ez_encode_unicode( $content ) {
-		$content = preg_replace_callback('/[\x{80}-\x{10FFFF}]/u', function ($match) {
-			list($utf8) = $match;
+		$nonAsciiUnicodeRegex = '/[\x{80}-\x{10FFFF}]/u';
+		if (!preg_match($nonAsciiUnicodeRegex, $content)) {
+			return $content;
+		}
+
+		// Step 1: Extract <script> blocks. We don't want to encode characters inside script blocks.
+		$script_placeholders = array();
+		$content = preg_replace_callback('/<script\b[^>]*>(.*?)<\/script>/is', function ($matches) use (&$script_placeholders) {
+			// Replace script content with a placeholder
+			$placeholder = '<!--SCRIPT_PLACEHOLDER_' . count($script_placeholders) . '-->';
+			$script_placeholders[] = $matches[0]; // Store the entire <script> block
+			return $placeholder;
+		}, $content);
+
+		// Step 2: Encode the content (but not the scripts)
+		$content = preg_replace_callback($nonAsciiUnicodeRegex, function ($match) {
+			// Our regex will only match one character at a time, so take $match[0] here and encode.
+			$utf8 = $match[0];
 			$binary = iconv('UTF-8', 'UTF-32BE', $utf8);
 			$entity = vsprintf('&#x%X;', unpack('N', $binary));
 			return $entity;
 		}, $content);
 
+		// Step 3: Reinsert the script blocks back into the content
+		foreach ($script_placeholders as $index => $script) {
+			$content = str_replace('<!--SCRIPT_PLACEHOLDER_' . $index . '-->', $script, $content);
+		}
 		return $content;
 	}
+
 }
 
 /**
