@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, site speed, cdn, seo, caching, cache, cloud, adstxt, optimization
 Requires at least: 5.2.0
-Tested up to: 6.6.1
+Tested up to: 6.6.2
 Requires PHP: 5.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -85,6 +85,9 @@ You will need to enable API access to the Ezoic Cloud to utilize caching feature
 Once you have your API key from your Ezoic dashboard, it can be added to your Ezoic plugin settings inside the site’s WordPress admin dashboard under Ezoic > CDN settings.
 
 == Changelog ==
+= 2.14.3 =
+* Sync Placement Service integration
+
 = 2.14.2 =
 * Minor bug fixes and optimizations
 
@@ -114,45 +117,3 @@ Once you have your API key from your Ezoic dashboard, it can be added to your Ez
 
 = 2.10.0 =
 * Minor bug fixes
-
-= 2.9.9 =
-* Small performance optimization
-
-= 2.9.8 =
-* Minor bug fixes
-
-= 2.9.7 =
-* Minor bug fixes
-
-= 2.9.6 =
-* Minor bug fixes
-
-= 2.9.5 =
-* Minor bug fixes
-
-= 2.9.4 =
-* Minor bug fixes
-
-= 2.9.3 =
-* Minor bug fixes
-
-= 2.9.2 =
-* Minor bug fixes
-
-= 2.9.1 =
-* Cache clearing enhancements
-
-= 2.9 =
-* Version update
-
-= 2.8.43 =
-* PHP 8.2 compatibility
-
-= 2.8.42 =
-* GTranslate cache clearing
-
-= 2.8.41 =
-* Minor bug fixes
-
-= 2.8.40 =
-* Update WordPress Compatibility

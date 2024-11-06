@@ -58,10 +58,11 @@ class Ezoic_AdTester_PublisherAd {
  * A data object representing a list of ad placeholders
  */
 class Ezoic_AdTester_PublisherAds {
-	public $ads						= array();
-	public $default_config			= array();
-	public $placeholders_created	= false;
-	public $revenues 				= array();
+	public $ads = array();
+	public $default_config = array();
+	public $placeholders_created = false;
+	public $revenues = array();
+	public $adpos_service = null;
 
 	/**
 	 * Initializes the list via a back-channel call to the backend systems
@@ -145,6 +146,10 @@ class Ezoic_AdTester_PublisherAds {
 				foreach ( $data->revenues as $adPositionId => $revenue ) {
 					$this->revenues[ $adPositionId ] = Ezoic_AdTester_Revenue::from_pubads( $adPositionId, $revenue );
 				}
+			}
+
+			if ( isset( $data->adPosService ) ) {
+				$this->adpos_service = $data->adPosService;
 			}
 		}
 	}

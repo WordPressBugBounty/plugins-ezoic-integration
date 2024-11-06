@@ -137,6 +137,11 @@ class Ezoic_AdTester extends Ezoic_Feature
 		// Get revenue values from publisher ads
 		$this->revenues = $publisher_ads->revenues;
 
+		if ( isset( $publisher_ads->adpos_service ) && $publisher_ads->adpos_service != $this->config->enable_adpos_integration ) {
+			$this->config->enable_adpos_integration = $publisher_ads->adpos_service;
+			self::log( 'APS Integration: ' . ( $this->config->enable_adpos_integration ? 'Enabled' : 'Disabled' ) );
+		}
+
 		// Store config
 		$this->update_config();
 	}
@@ -679,7 +684,7 @@ class Ezoic_AdTester extends Ezoic_Feature
 	}
 
 	public function update_config() {
-		self::log( 'updating configuration ' );
+		//self::log( 'updating configuration ' );
 
 		Ezoic_AdTester_Config::store( $this->config );
 	}
@@ -760,6 +765,6 @@ class Ezoic_AdTester extends Ezoic_Feature
 	}
 
 	public static function log($str) {
-		error_log( '[ adtester ] ' . $str );
+		error_log( '[ Ezoic ] ' . $str );
 	}
 }

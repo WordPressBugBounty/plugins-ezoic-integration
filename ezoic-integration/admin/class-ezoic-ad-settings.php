@@ -134,27 +134,27 @@ class Ezoic_Integration_Ad_Settings {
 	}
 
 
-	/** 
+	/**
 	 * Retrieves placeholders w/ optional date range filter
 	 */
 	public function retrieve_placeholders(){
 		$this->adtester = new Ezoic_AdTester();
-		
+
 		$dateFrom = false;
 		$dateTo = false;
-		//make sure both of these are set properly, expecting a positive timestamp integer, 
+		//make sure both of these are set properly, expecting a positive timestamp integer,
 		//we don't want to allow willy-nilly vals through which could lead to xss/db inject
 		if(
 			//date from
-			array_key_exists('dateFrom', $_GET) && 
-			isset($_GET['dateFrom']) && 
+			array_key_exists('dateFrom', $_GET) &&
+			isset($_GET['dateFrom']) &&
 			is_numeric($_GET['dateFrom']) &&
 			$_GET['dateFrom'] > 0 &&
 
 			//date to
-			array_key_exists('dateTo', $_GET) && 
-			isset($_GET['dateTo']) && 
-			is_numeric($_GET['dateTo']) && 
+			array_key_exists('dateTo', $_GET) &&
+			isset($_GET['dateTo']) &&
+			is_numeric($_GET['dateTo']) &&
 			$_GET['dateTo'] > 0
 		) {
 			$dateFrom = $_GET['dateFrom'];
@@ -270,7 +270,7 @@ class Ezoic_Integration_Ad_Settings {
 			$config->skip_word_count = null;
 		}
 
-		Ezoic_AdTester::log( 'saving general settings' );
+		//Ezoic_AdTester::log( 'saving general settings' );
 
 		// Store configuration
 		$this->adtester->update_config();
