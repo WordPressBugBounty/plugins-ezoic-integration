@@ -54,6 +54,10 @@ class Ezoic_Integration_CURL_Response implements iEzoic_Integration_Response {
 			foreach( $headers as $key => $header ) {
 				//Avoid content encoding as this will cause rendering problems
 				if( !$this->is_bad_header($key) ) {
+					if (strtolower($key) === 'set-cookie') {
+						Ezoic_Integration_Request_Utils::handle_cookies_from_header_value($header);
+						continue;
+					}
 					$this->handle_header_object($key, $header);
 				}
 			}

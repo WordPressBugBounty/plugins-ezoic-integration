@@ -90,6 +90,10 @@ class Ezoic_Integration_Cache_Endpoints implements iEzoic_Integration_Endpoints 
 				status_header( 200 );
 				if ( is_array( $headers ) || is_object( $headers ) ) {
 					foreach ( $headers as $key => $header ) {
+						if (strtolower($key) === 'set-cookie') {
+							Ezoic_Integration_Request_Utils::handle_cookies_from_header_value($header);
+							continue;
+						}
 						$this->handle_header_object( $key, $header );
 					}
 				} else {

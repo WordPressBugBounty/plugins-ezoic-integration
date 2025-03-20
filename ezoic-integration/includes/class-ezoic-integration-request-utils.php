@@ -175,4 +175,75 @@ class Ezoic_Integration_Request_Utils {
 
 		return false;
 	}
+
+	/**
+	 * Handle cookies from Set-Cookie header value(s)
+	 * 
+	 * @param string|array $header_value The header value(s) from the Set-Cookie header
+	 * @return void
+	 */
+	public static function handle_cookies_from_header_value($header_value) {
+		$cookies = is_array($header_value) ? $header_value : array($header_value);
+		
+		// If no specific allowed cookies list is provided, we allow all cookies
+		// Otherwise, we use the provided list of allowed cookies (keys should be lowercase)
+		$allowed_cookies = array(
+			'ez-consent-humix' => true,
+			'humvtoken' => true
+		);
+		
+		foreach ($cookies as $cookie_str) {
+			// Parse the cookie string
+			$cookie_parts = explode(';', $cookie_str);
+			$main_part = array_shift($cookie_parts);
+			list($name, $value) = explode('=', $main_part, 2);
+
+			// Skip if this cookie is not in the allowed list
+			if (!isset($allowed_cookies[strtolower($name)])) {
+				continue;
+			}
+
+			// Extract cookie attributes
+			$cookie_params = array(
+				'expires' => 0,
+				'path' => '/',
+				'domain' => '',
+				'secure' => false,
+				'httponly' => false
+			);
+
+			foreach ($cookie_parts as $part) {
+				$part = trim($part);
+				if (strtolower($part) === 'secure') {
+					$cookie_params['secure'] = true;
+				} elseif (strtolower($part) === 'httponly') {
+					$cookie_params['httponly'] = true;
+				} else {
+					$attr_parts = explode('=', $part, 2);
+					if (count($attr_parts) === 2) {
+						$attr_name = strtolower(trim($attr_parts[0]));
+						$attr_value = trim($attr_parts[1]);
+						if ($attr_name === 'expires') {
+							$cookie_params['expires'] = strtotime($attr_value);
+						} elseif ($attr_name === 'path') {
+							$cookie_params['path'] = $attr_value;
+						} elseif ($attr_name === 'domain') {
+							$cookie_params['domain'] = $attr_value;
+						}
+					}
+				}
+			}
+
+			// Set the cookie
+			setcookie(
+				$name,
+				$value,
+				$cookie_params['expires'],
+				$cookie_params['path'],
+				$cookie_params['domain'],
+				$cookie_params['secure'],
+				$cookie_params['httponly']
+			);
+		}
+	}
 }
