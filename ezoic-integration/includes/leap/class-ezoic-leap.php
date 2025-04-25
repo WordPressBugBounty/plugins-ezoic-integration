@@ -18,11 +18,11 @@ class Ezoic_Leap extends Ezoic_Feature {
 
 	public function register_admin_hooks( $loader ) {
 		// Send debug data on core/theme/plugin updates
-		$loader->add_action( 'admin_init', $this->wp_data, 'send_debug_to_ezoic' );
-		$loader->add_action( 'switch_theme', $this->wp_data, 'set_debug_to_ezoic' );
-		$loader->add_action( 'activated_plugin', $this->wp_data, 'set_debug_to_ezoic' );
-		$loader->add_action( 'deactivated_plugin', $this->wp_data, 'set_debug_to_ezoic' );
-		$loader->add_action( 'upgrader_process_complete', $this->wp_data, 'set_debug_to_ezoic' );
+		// $loader->add_action( 'admin_init', $this->wp_data, 'send_debug_to_ezoic' );
+		// $loader->add_action( 'switch_theme', $this->wp_data, 'set_debug_to_ezoic' );
+		// $loader->add_action( 'activated_plugin', $this->wp_data, 'set_debug_to_ezoic' );
+		// $loader->add_action( 'deactivated_plugin', $this->wp_data, 'set_debug_to_ezoic' );
+		// $loader->add_action( 'upgrader_process_complete', $this->wp_data, 'set_debug_to_ezoic' );
 	}
 
 }

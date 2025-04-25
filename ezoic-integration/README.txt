@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, site speed, cdn, seo, caching, cache, cloud, adstxt, optimization
 Requires at least: 5.2.0
-Tested up to: 6.6.2
+Tested up to: 6.8
 Requires PHP: 5.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -45,7 +45,7 @@ Ezoic’s plugin is best utilized alongside Cloud integration (via Cloudflare or
 
 How to change from WordPress integration to Cloud integration:
 
-[https://support.ezoic.com/kb/article/switching-from-wordpress-integration-to-ezoic-name-server-integration?id=switching-from-wordpress-integration-to-ezoic-name-server-integration](https://support.ezoic.com/kb/article/switching-from-wordpress-integration-to-ezoic-name-server-integration?id=switching-from-wordpress-integration-to-ezoic-name-server-integration)
+[https://support.ezoic.com/kb/article/switching-from-wordpress-integration-to-ezoic-cloud-integration](https://support.ezoic.com/kb/article/switching-from-wordpress-integration-to-ezoic-cloud-integration)
 
 ---
 
@@ -55,7 +55,7 @@ Ezoic’s WordPress plugin allows you to easily set up and adjust ad placeholder
 
 The following guide will walk you through installing, activating and updating your placeholder setup within the Ezoic WordPress Plugin:
 
-[https://support.ezoic.com/kb/article/setting-up-ad-tester-placeholders-with-the-ezoic-wordpress-plugin](https://support.ezoic.com/kb/article/setting-up-ad-tester-placeholders-with-the-ezoic-wordpress-plugin)
+[https://support.ezoic.com/kb/article/setting-up-ezoic-placeholders-with-the-ezoic-wordpress-plugin](https://support.ezoic.com/kb/article/setting-up-ezoic-placeholders-with-the-ezoic-wordpress-plugin`)
 
 ---
 
@@ -85,6 +85,9 @@ You will need to enable API access to the Ezoic Cloud to utilize caching feature
 Once you have your API key from your Ezoic dashboard, it can be added to your Ezoic plugin settings inside the site’s WordPress admin dashboard under Ezoic > CDN settings.
 
 == Changelog ==
+= 2.15.1 =
+* Update Leap optimization features
+
 = 2.14.4 =
 * Minor bug fix for cookie handling
 
@@ -113,10 +116,4 @@ Once you have your API key from your Ezoic dashboard, it can be added to your Ez
 * Added Support for ad placeholders to be used as humix placeholders
 
 = 2.11.0 =
-* Minor bug fixes
-
-= 2.10.1 =
-* Enhanced ads.txt setup
-
-= 2.10.0 =
 * Minor bug fixes

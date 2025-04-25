@@ -107,14 +107,6 @@ class Ezoic_Speed_Settings {
 			'ezoic_speed_settings_section'
 		);
 
-		add_settings_field(
-			'ezoic_sync_technologies',
-			__( 'Sync Plugins/Themes', 'ezoic' ),
-			array( $this, 'ezoic_sync_technologies_field' ),
-			'ezoic_speed_settings',
-			'ezoic_speed_settings_section'
-		);
-
 		// Register setting (this is an array of the various settings, see default_speed_settings())
 		register_setting( 'ezoic_speed_settings', 'ezoic_speed_settings' );
 	}
@@ -375,31 +367,6 @@ class Ezoic_Speed_Settings {
             Removes WordPress shortlink data from page header
         </p>
 		<?php
-	}
-
-	public function ezoic_sync_technologies_field() {
-		?>
-		<a class="button button-primary"
-		   href="<?php echo '?page=' . EZOIC__PLUGIN_SLUG . '&tab=ezoic_speed_settings&sync_technologies=1'; ?>"
-		   style="color: white; text-decoration: none;">
-				Sync!
-		</a>
-		<p class="description">
-			Update your active plugins and theme in Ezoic Leap Technologies
-		</p>
-		<?php
-		if ( isset( $_GET['sync_technologies'] ) ) {
-			$debug_data = new Ezoic_Leap_Wp_Data();
-			$debug_data->send_debug_to_ezoic( true );
-			?>
-			<div id="message"
-				 class="updated notice is-dismissible">
-				<p><strong>
-					<?php _e( 'Success! Your active plugins and theme have been synced with Ezoic.', 'ezoic' ); ?>
-				</strong></p>
-			</div>
-			<?php
-		}
 	}
 
 	// Establish default settings

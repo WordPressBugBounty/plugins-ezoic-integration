@@ -64,11 +64,6 @@ class Ezoic_Integration_Deactivator {
 			// Remove the advanced cache file.
 			$cache_integrator->remove_advanced_cache();
 		}
-
-		// send deactivation debug data
-		set_transient( 'ezoic_send_debug', array( 1, 0 ) );
-		$wp_data = new Ezoic_Leap_Wp_Data();
-		$wp_data->send_debug_to_ezoic();
 	}
 
 }

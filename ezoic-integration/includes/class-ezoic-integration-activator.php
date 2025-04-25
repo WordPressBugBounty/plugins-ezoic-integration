@@ -77,11 +77,6 @@ class Ezoic_Integration_Activator {
 		// clear any plugin caches
 		set_transient( 'ezoic_clear_caches', true );
 
-		// send activation debug data
-		set_transient( 'ezoic_send_debug', array( 1, 1 ) );
-		$wp_data = new Ezoic_Leap_Wp_Data();
-		$wp_data->send_debug_to_ezoic();
-
 		do_action( 'ez_activate' );
 	}
 
