@@ -18,7 +18,7 @@ namespace Ezoic_Namespace;
  * Plugin Name:       Ezoic
  * Plugin URI:        https://ezoic.com/
  * Description:       Easily integrate and connect with Ezoic using WordPress. In order to activate this plugin properly you will need an Ezoic account. You can create an account here: https://pubdash.ezoic.com/join
- * Version:           2.15.1
+ * Version:           2.15.2
  * Author:            Ezoic Inc.
  * Author URI:        https://ezoic.com/
  * License:           GPL-2.0+
@@ -28,7 +28,7 @@ namespace Ezoic_Namespace;
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
+if (! defined('WPINC')) {
 	die;
 }
 
@@ -36,32 +36,32 @@ if ( ! defined( 'WPINC' ) ) {
  * Plugin Constants
  */
 
-if ( ! defined( 'EZOIC_INTEGRATION_VERSION' ) ) {
-       define( 'EZOIC_INTEGRATION_VERSION', '2.15.1' ); // also update version in 'class-ezoic-integration-factory.php'.
+if (! defined('EZOIC_INTEGRATION_VERSION')) {
+	define('EZOIC_INTEGRATION_VERSION', '2.15.2'); // also update version in 'class-ezoic-integration-factory.php'.
 }
-define( 'EZOIC__PLUGIN_NAME', 'Ezoic' );
-define( 'EZOIC__PLUGIN_SLUG', dirname( plugin_basename( __FILE__ ) ) );
-define( 'EZOIC__PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'EZOIC__PLUGIN_FILE', plugin_basename( __FILE__ ) );
-define( 'EZOIC__PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define('EZOIC__PLUGIN_NAME', 'Ezoic');
+define('EZOIC__PLUGIN_SLUG', dirname(plugin_basename(__FILE__)));
+define('EZOIC__PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('EZOIC__PLUGIN_FILE', plugin_basename(__FILE__));
+define('EZOIC__PLUGIN_URL', plugin_dir_url(__FILE__));
 
-define( 'EZOIC__SITE_NAME', 'Ezoic' );
-define( 'EZOIC__SITE_LOGIN', 'https://login.ezoic.com/' );
+define('EZOIC__SITE_NAME', 'Ezoic');
+define('EZOIC__SITE_LOGIN', 'https://login.ezoic.com/');
 
-define( 'EZOIC_ADSTXT_MANAGER__PLUGIN_NAME', 'Ads.txt Manager' ); // standalone ads.txt manager plugin name
-define( 'EZOIC_ADSTXT_MANAGER__SITE', 'https://www.adstxtmanager.com/' );
-define( 'EZOIC_ADSTXT_MANAGER__SITE_LOGIN', 'https://svc.adstxtmanager.com/auth/login' );
+define('EZOIC_ADSTXT_MANAGER__PLUGIN_NAME', 'Ads.txt Manager'); // standalone ads.txt manager plugin name
+define('EZOIC_ADSTXT_MANAGER__SITE', 'https://www.adstxtmanager.com/');
+define('EZOIC_ADSTXT_MANAGER__SITE_LOGIN', 'https://svc.adstxtmanager.com/auth/login');
 
-if ( !defined( 'EZOIC_DEBUG' ) ) {
-	define( 'EZOIC_DEBUG', isset($_GET[ 'ez_wp_debug' ]) && $_GET[ 'ez_wp_debug' ] == '1' );
-}
-
-if ( !defined( 'EZOIC__DISABLE' ) ) {
-	define( 'EZOIC__DISABLE', (isset($_GET[ 'ez_wp_force_static' ]) && $_GET[ 'ez_wp_force_static' ] == '1') || ( isset( $_SERVER[ 'HTTP_USER_AGENT' ] ) && $_SERVER[ 'HTTP_USER_AGENT' ] === 'EzoicStatic' ) );
+if (!defined('EZOIC_DEBUG')) {
+	define('EZOIC_DEBUG', isset($_GET['ez_wp_debug']) && $_GET['ez_wp_debug'] == '1');
 }
 
-if ( !defined( 'EZOIC__DISABLE__FEATURE' ) && isset($_GET[ 'ez_wp_disable_feature' ]) ) {
-	define( 'EZOIC__DISABLE__FEATURE', array_filter( explode(',', $_GET[ 'ez_wp_disable_feature' ]) ) );
+if (!defined('EZOIC__DISABLE')) {
+	define('EZOIC__DISABLE', (isset($_GET['ez_wp_force_static']) && $_GET['ez_wp_force_static'] == '1') || (isset($_SERVER['HTTP_USER_AGENT']) && $_SERVER['HTTP_USER_AGENT'] === 'EzoicStatic'));
+}
+
+if (!defined('EZOIC__DISABLE__FEATURE') && isset($_GET['ez_wp_disable_feature'])) {
+	define('EZOIC__DISABLE__FEATURE', array_filter(explode(',', $_GET['ez_wp_disable_feature'])));
 }
 
 /**
@@ -69,15 +69,16 @@ if ( !defined( 'EZOIC__DISABLE__FEATURE' ) && isset($_GET[ 'ez_wp_disable_featur
  * Starts at version 1.0.0
  * Rename this constant if we change anything about what the api accepts
  */
-if ( ! defined( 'EZOIC_API_VERSION' ) ) {
-	define( 'EZOIC_API_VERSION', '1.0.0' );
+if (! defined('EZOIC_API_VERSION')) {
+	define('EZOIC_API_VERSION', '1.0.0');
 }
 
 /**
  * The code that runs during plugin activation.
  * This action is documented in includes/class-ezoic-integration-activator.php
  */
-function activate_ezoic_integration() {
+function activate_ezoic_integration()
+{
 	require_once EZOIC__PLUGIN_DIR . 'includes/class-ezoic-integration-activator.php';
 	Ezoic_Integration_Activator::activate();
 }
@@ -86,13 +87,14 @@ function activate_ezoic_integration() {
  * The code that runs during plugin deactivation.
  * This action is documented in includes/class-ezoic-integration-deactivator.php
  */
-function deactivate_ezoic_integration() {
+function deactivate_ezoic_integration()
+{
 	require_once EZOIC__PLUGIN_DIR . 'includes/class-ezoic-integration-deactivator.php';
 	Ezoic_Integration_Deactivator::deactivate();
 }
 
-register_activation_hook( __FILE__, 'Ezoic_Namespace\activate_ezoic_integration' );
-register_deactivation_hook( __FILE__, 'Ezoic_Namespace\deactivate_ezoic_integration' );
+register_activation_hook(__FILE__, 'Ezoic_Namespace\activate_ezoic_integration');
+register_deactivation_hook(__FILE__, 'Ezoic_Namespace\deactivate_ezoic_integration');
 
 /**
  * The core plugin class that is used to define internationalization,
@@ -109,11 +111,11 @@ require EZOIC__PLUGIN_DIR . 'includes/class-ezoic-integration.php';
  *
  * @since    1.0.0
  */
-function run_ezoic_integration() {
+function run_ezoic_integration()
+{
 
 	$ezoic_integration = new Ezoic_Integration();
 	$ezoic_integration->run();
-
 }
 
 run_ezoic_integration();

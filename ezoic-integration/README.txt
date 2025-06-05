@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, site speed, cdn, seo, caching, cache, cloud, adstxt, optimization
 Requires at least: 5.2.0
-Tested up to: 6.8
+Tested up to: 6.8.1
 Requires PHP: 5.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -85,6 +85,9 @@ You will need to enable API access to the Ezoic Cloud to utilize caching feature
 Once you have your API key from your Ezoic dashboard, it can be added to your Ezoic plugin settings inside the site’s WordPress admin dashboard under Ezoic > CDN settings.
 
 == Changelog ==
+= 2.15.2 =
+* Enhance JavaScript integration support
+
 = 2.15.1 =
 * Update Leap optimization features
 
@@ -114,6 +117,3 @@ Once you have your API key from your Ezoic dashboard, it can be added to your Ez
 
 = 2.12.0 =
 * Added Support for ad placeholders to be used as humix placeholders
-
-= 2.11.0 =
-* Minor bug fixes

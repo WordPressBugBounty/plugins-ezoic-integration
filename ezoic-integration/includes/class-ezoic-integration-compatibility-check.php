@@ -16,7 +16,8 @@ namespace Ezoic_Namespace;
  * Class Ezoic_Integration_Compatibility_Check
  * @package Ezoic_Namespace
  */
-class Ezoic_Integration_Compatibility_Check {
+class Ezoic_Integration_Compatibility_Check
+{
 
 	// incompatible plugins regardless of integration type
 	static $all_incompatible_plugins = array(
@@ -60,11 +61,11 @@ class Ezoic_Integration_Compatibility_Check {
 		),*/
 		'Swift Performance Lite' => array(
 			'versions' => 'all',
-			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin; however, most WP caching plugins should be disabled when using Ezoic\'s Leap optimization features. Fortunately, Leap replaces all the functionality of these caching plugins and delivers better performance.'
+			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin.'
 		),
 		'LiteSpeed Cache' => array(
 			'versions' => 'all',
-			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin; however, most WP caching plugins should be disabled when using Ezoic\'s Leap optimization features. Fortunately, Leap replaces all the functionality of these caching plugins and delivers better performance.'
+			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin.'
 		),
 		'WP Fastest Cache' => array(
 			'versions' => 'all',
@@ -76,48 +77,28 @@ class Ezoic_Integration_Compatibility_Check {
 		),
 		'WP-Optimize - Clean, Compress, Cache' => array(
 			'versions' => 'all',
-			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin; however, most WP caching plugins should be disabled when using Ezoic\'s Leap optimization features. Fortunately, Leap replaces all the functionality of these caching plugins and delivers better performance.'
+			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin.'
 		),
 		'SG Optimizer' => array(
 			'versions' => 'all',
-			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin; however, most WP caching plugins should be disabled when using Ezoic\'s Leap optimization features. Fortunately, Leap replaces all the functionality of these caching plugins and delivers better performance.'
+			'message' => 'Plugin must be disabled to utilize Ezoic without issues or conflicts. Sites can elect to use a whitelisted WP caching plugin.'
 		),
 	);
 
 	// list of known compatible plugins
 	static $whitelisted_plugins = array(
-		'W3 Total Cache' => array(
-			'versions' => 'all',
-			'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
-		),
-		'WP Super Cache' => array(
-			'versions' => 'all',
-			'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
-		),
-		'WP Rocket' => array(
-			'versions' => 'all',
-			'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
-		),
-		'ShortPixel Image Optimizer' => array(
-			'versions' => 'all',
-			'message' => 'This plugin is no longer required when using Ezoic\'s Leap optimization features, and may cause conflicts in performance. Ezoic performs all the paid features of this plugin and much more.'
-		),
-		'Imagify' => array(
-			'versions' => 'all',
-			'message' => 'This plugin is no longer required when using Ezoic\'s Leap optimization features, and may cause conflicts in performance. Ezoic performs all the paid features of this plugin and much more.'
-		),
-		'reSmush.it Image Optimizer' => array(
-			'versions' => 'all',
-			'message' => 'This plugin is no longer required when using Ezoic\'s Leap optimization features, and may cause conflicts in performance. Ezoic performs all the paid features of this plugin and much more.'
-		),
-		'Smush' => array(
-			'versions' => 'all',
-			'message' => 'This plugin is no longer required when using Ezoic\'s Leap optimization features, and may cause conflicts in performance. Ezoic performs all the paid features of this plugin and much more.'
-		),
-		'EWWW Image Optimizer' => array(
-			'versions' => 'all',
-			'message' => 'This plugin is no longer required when using Ezoic\'s Leap optimization features, and may cause conflicts in performance. Ezoic performs all the paid features of this plugin and much more.'
-		),
+		// 'W3 Total Cache' => array(
+		// 	'versions' => 'all',
+		// 	'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
+		// ),
+		// 'WP Super Cache' => array(
+		// 	'versions' => 'all',
+		// 	'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
+		// ),
+		// 'WP Rocket' => array(
+		// 	'versions' => 'all',
+		// 	'message' => 'Ezoic\'s Leap optimization features may require that these plugins be turned off or that all minification, caching, or "speed" optimizations are disabled to prevent conflicts. Leap optimally replaces the functionality of these plugins as it relates to site speed.'
+		// ),
 	);
 
 	/**
@@ -127,33 +108,36 @@ class Ezoic_Integration_Compatibility_Check {
 	 *
 	 * @return array
 	 */
-	public static function get_active_incompatible_plugins($activation = false) {
+	public static function get_active_incompatible_plugins($activation = false)
+	{
 		$active_plugins       = self::get_active_plugins();
 		$incompatible_plugins = array();
 
 		// incompatible with wordpress integration
-		if ( Ezoic_Integration_Admin::is_wordpress_integrated() ) {
-			foreach ( $active_plugins as $filename => $plugin ) {
-				if ( self::is_in_plugins_list( $plugin, self::$known_incompatible_plugins ) ) {
-					if ( $activation
-					     && isset( self::$known_incompatible_plugins[ $plugin['name'] ]['allow_install'] )
-					     && self::$known_incompatible_plugins[ $plugin['name'] ]['allow_install'] == true ) {
+		if (Ezoic_Integration_Admin::is_wordpress_integrated()) {
+			foreach ($active_plugins as $filename => $plugin) {
+				if (self::is_in_plugins_list($plugin, self::$known_incompatible_plugins)) {
+					if (
+						$activation
+						&& isset(self::$known_incompatible_plugins[$plugin['name']]['allow_install'])
+						&& self::$known_incompatible_plugins[$plugin['name']]['allow_install'] == true
+					) {
 						// skip activation wp_die()
 						continue;
 					}
-					$plugin['message']  = self::$known_incompatible_plugins[ $plugin['name'] ]['message'];
+					$plugin['message']  = self::$known_incompatible_plugins[$plugin['name']]['message'];
 					$plugin['filename'] = $filename;
-					array_push( $incompatible_plugins, $plugin );
+					array_push($incompatible_plugins, $plugin);
 				}
 			}
 		}
 
 		// incompatible with any integration type
-		foreach ( $active_plugins as $filename => $plugin ) {
-			if ( self::is_in_plugins_list( $plugin, self::$all_incompatible_plugins ) ) {
-				$plugin['message']  = self::$all_incompatible_plugins[ $plugin['name'] ]['message'];
+		foreach ($active_plugins as $filename => $plugin) {
+			if (self::is_in_plugins_list($plugin, self::$all_incompatible_plugins)) {
+				$plugin['message']  = self::$all_incompatible_plugins[$plugin['name']]['message'];
 				$plugin['filename'] = $filename;
-				array_push( $incompatible_plugins, $plugin );
+				array_push($incompatible_plugins, $plugin);
 			}
 		}
 		return $incompatible_plugins;
@@ -163,7 +147,8 @@ class Ezoic_Integration_Compatibility_Check {
 	 * Get plugins that are known to be compatible with Ezoic but can be replaced by another Ezoic product.
 	 * @return array
 	 */
-	public static function get_compatible_plugins_with_recommendations() {
+	public static function get_compatible_plugins_with_recommendations()
+	{
 		$active_plugins = self::get_active_plugins();
 		$plugins = array();
 		foreach ($active_plugins as $filename => $plugin) {
@@ -178,7 +163,8 @@ class Ezoic_Integration_Compatibility_Check {
 		return $plugins;
 	}
 
-	public static function get_active_plugins() {
+	public static function get_active_plugins()
+	{
 		if (!function_exists('get_plugins')) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
@@ -197,7 +183,8 @@ class Ezoic_Integration_Compatibility_Check {
 		return $plugins;
 	}
 
-	private static function is_in_plugins_list($plugin, $plugins_list) {
+	private static function is_in_plugins_list($plugin, $plugins_list)
+	{
 		foreach ($plugins_list as $name => $info) {
 			$versions = $info['versions'];
 			if ($plugin['name'] == $name) {
@@ -217,13 +204,14 @@ class Ezoic_Integration_Compatibility_Check {
 	 *
 	 * @return string
 	 */
-	public static function plugin_action_url( $plugin, $action = 'deactivate' ) {
-		if ( strpos( $plugin, '/' ) ) {
-			$plugin = str_replace( '\/', '%2F', $plugin );
+	public static function plugin_action_url($plugin, $action = 'deactivate')
+	{
+		if (strpos($plugin, '/')) {
+			$plugin = str_replace('\/', '%2F', $plugin);
 		}
-		$url = sprintf( admin_url( 'plugins.php?action=' . $action . '&plugin=%s&plugin_status=all&paged=1&s' ), $plugin );
+		$url = sprintf(admin_url('plugins.php?action=' . $action . '&plugin=%s&plugin_status=all&paged=1&s'), $plugin);
 		$_REQUEST['plugin'] = $plugin;
-		$url = wp_nonce_url( $url, $action . '-plugin_' . $plugin );
+		$url = wp_nonce_url($url, $action . '-plugin_' . $plugin);
 		return $url;
 	}
 }
