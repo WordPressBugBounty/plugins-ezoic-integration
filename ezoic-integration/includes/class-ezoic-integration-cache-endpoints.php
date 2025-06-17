@@ -63,7 +63,7 @@ class Ezoic_Integration_Cache_Endpoints implements iEzoic_Integration_Endpoints 
 				$matches = array();
 				if ( preg_match( '/(' . preg_quote( $endpoint, '/' ) . '.*)/', $current_url, $matches ) ) {
 					if ( isset( $matches[0] ) ) {
-						if ( strpos( $endpoint, '/humix/' ) === 0 ) {
+						if ( strpos( $endpoint, '/humix/' ) === 0 || strpos( $endpoint, '/openvideo/') === 0 ) {
 							$this->current_endpoint = $matches[0];
 						} else {
 							$this->current_endpoint = str_replace( "/?", "?", $matches[0] );
