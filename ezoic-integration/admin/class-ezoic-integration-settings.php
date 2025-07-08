@@ -14,6 +14,7 @@ namespace Ezoic_Namespace;
 include_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-compatibility-check.php';
 include_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-cache-integrator.php';
 include_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-cache.php';
+include_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-js-integration-settings.php';
 
 /**
  * Class Ezoic_Integration_Admin_Settings
@@ -30,6 +31,7 @@ class Ezoic_Integration_Admin_Settings
 	private $cache;
 	private $ads_enabled;
 	private $ad_settings;
+	private $js_integration_settings;
 
 	/**
 	 * Initialize the class and set its properties.
@@ -46,6 +48,7 @@ class Ezoic_Integration_Admin_Settings
 		$this->cache_integrator = new Ezoic_Integration_Cache_Integrator;
 		$this->cache            = new Ezoic_Integration_Cache;
 		$this->ad_settings      = new Ezoic_Integration_Ad_Settings();
+		$this->js_integration_settings = new Ezoic_JS_Integration_Settings();
 
 		// Do not display information if disabled
 		$this->ads_enabled = \get_option('ez_ad_integration_enabled', 'false') == 'true';
@@ -154,7 +157,6 @@ class Ezoic_Integration_Admin_Settings
 ?>
 		<div class="wrap" id="ez_integration">
 			<?php
-
 			// Handles post requests for cache clearing. Displays an alert message upon success.
 			if (empty($_POST) === false) {
 				if ($_POST['action'] == 'clear_cache') {
@@ -163,10 +165,30 @@ class Ezoic_Integration_Admin_Settings
 					<div id="message" class="updated notice is-dismissible">
 						<p><strong><?php _e('Cache successfully cleared!'); ?></strong></p>
 					</div>
-			<?php
-
+				<?php
+				} elseif ($_POST['action'] == 'enable_js_integration') {
+					$this->handle_enable_js_integration();
 				}
 			}
+
+			// Show success message if JavaScript integration was just disabled
+			if (isset($_GET['js_integration_disabled']) && $_GET['js_integration_disabled'] == '1') {
+				?>
+				<div id="message" class="updated notice is-dismissible">
+					<p><strong><?php _e('JavaScript Integration has been disabled. Your site will now use automatic integration detection.'); ?></strong></p>
+				</div>
+			<?php
+			}
+
+			// Show success message if JavaScript integration was just enabled
+			if (isset($_GET['js_integration_enabled']) && $_GET['js_integration_enabled'] == '1') {
+			?>
+				<div id="message" class="updated notice is-dismissible">
+					<p><strong><?php _e('JavaScript Integration has been enabled! You can now configure it in the Integration tab.'); ?></strong></p>
+				</div>
+			<?php
+			}
+
 			?>
 
 			<p><img src="<?php echo plugins_url('/admin/img', EZOIC__PLUGIN_FILE); ?>/ezoic-logo.png" width="190" height="40" alt="Ezoic" /></p>
@@ -177,6 +199,8 @@ class Ezoic_Integration_Admin_Settings
 				$active_tab = 'advanced_options';
 			} elseif ($active_tab == 'cdn_settings') {
 				$active_tab = 'cdn_settings';
+			} elseif ($active_tab == 'js_integration') {
+				$active_tab = 'js_integration';
 			} elseif ($active_tab == 'adstxtmanager_settings') {
 				$active_tab = 'adstxtmanager_settings';
 			} elseif ($active_tab == 'emote_settings') {
@@ -192,6 +216,8 @@ class Ezoic_Integration_Admin_Settings
 																													'Dashboard',
 																													'ezoic'
 																												); ?></a>
+				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=js_integration"
+					class="nav-tab <?php echo $active_tab == 'js_integration' ? 'nav-tab-active' : ''; ?>"><?php _e('Integration', 'ezoic'); ?></a>
 				<?php if (Ezoic_AdsTxtManager::ezoic_should_show_adstxtmanager_setting()) { ?>
 					<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=adstxtmanager_settings"
 						class="nav-tab <?php echo $active_tab == 'adstxtmanager_settings' ? 'nav-tab-active' : ''; ?>"><?php
@@ -199,17 +225,17 @@ class Ezoic_Integration_Admin_Settings
 																														?> <?php echo $atm_warning; ?></a>
 				<?php } ?>
 				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=ad_settings"
-					class="nav-tab <?php echo $active_tab == 'ad_settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Ad Settings', 'ezoic'); ?></a>
+					class="nav-tab <?php echo $active_tab == 'ad_settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Ad Placements', 'ezoic'); ?></a>
 
 
 				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=cdn_settings"
 					class="nav-tab <?php echo $active_tab == 'cdn_settings' ? 'nav-tab-active' : ''; ?>"><?php _e(
-																												'CDN Settings',
+																												'Cache Settings',
 																												'ezoic'
 																											); ?> <?php echo $cdn_warning; ?></a>
 
-				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=ezoic_speed_settings"
-					class="nav-tab <?php echo $active_tab == 'ezoic_speed_settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Speed Settings', 'ezoic'); ?></a>
+				<!--<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=ezoic_speed_settings"
+					class="nav-tab <?php echo $active_tab == 'ezoic_speed_settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Speed Settings', 'ezoic'); ?></a>-->
 				<?php if ((\get_option('ez_emote', 'false') == 'true')) { ?>
 					<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=emote_settings"
 						class="nav-tab <?php echo $active_tab == 'emote_settings' ? 'nav-tab-active' : ''; ?>"><?php _e(
@@ -218,13 +244,9 @@ class Ezoic_Integration_Admin_Settings
 																												); ?></a>
 				<?php } ?>
 
-
-
-
-
 				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=advanced_options"
 					class="nav-tab <?php echo $active_tab == 'advanced_options' ? 'nav-tab-active' : ''; ?>"><?php _e(
-																													'Advanced Settings',
+																													'Advanced',
 																													'ezoic'
 																												); ?></a>
 
@@ -263,16 +285,20 @@ class Ezoic_Integration_Admin_Settings
 					settings_fields('ezoic_emote_settings');
 					do_settings_sections('ezoic_emote_settings');
 					submit_button('Save Settings');
+				} elseif ($active_tab == 'js_integration') {
+					$this->js_integration_settings->render_js_integration_tab();
 				} else {
 					settings_fields('ezoic_integration_status');
 					do_settings_sections('ezoic_integration_status');
 				} // end if/else
 
 				?>
-			</form>
-
+			</form> <?php if ($active_tab == 'js_integration') {
+						$this->js_integration_settings->render_help_section();
+					} ?>
 		</div><!-- /.wrap -->
 <?php }
+
 	public function general_options_callback()
 	{
 		$options = \get_option('ezoic_integration_status');
@@ -580,6 +606,12 @@ class Ezoic_Integration_Admin_Settings
 			$options               = \get_option('ezoic_integration_status');
 			$options['check_time'] = '';
 			update_option('ezoic_integration_status', $options);
+
+			// If disable_wp_integration is changed to "No" (0), disable JS Integration
+			if ($settings['disable_wp_integration'] == 0 && $old_options['disable_wp_integration'] == 1) {
+				// Disable JavaScript integration when WP integration is enabled
+				update_option('ezoic_js_integration_enabled', false);
+			}
 		}
 
 		return $settings;
@@ -604,8 +636,19 @@ class Ezoic_Integration_Admin_Settings
 				// cloud
 				$html .= '<p class="text-success"><strong>Cloud Integrated &nbsp;<span class="dashicons dashicons-cloud-saved text-success" title="Cloud Integrated"></span></strong></p>';
 			} elseif (! empty($options['integration_type']) && $options['integration_type'] == "sa") {
-				// javascript
-				$html .= '<p class="text-info"><strong>JavaScript Integrated &nbsp;<span class="dashicons dashicons-saved"></span></strong></p>';
+				// Check if plugin is managing the SA integration
+				$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
+				$js_options = get_option('ezoic_js_integration_options');
+				$auto_insert_enabled = $js_integration_enabled && isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts'];
+
+				if ($auto_insert_enabled) {
+					// SA integration managed by plugin
+					$html .= '<p class="text-info"><strong>JavaScript Integration (Managed by Plugin) &nbsp;<span class="dashicons dashicons-saved"></span></strong></p>';
+					$html .= '<br/><a class="button button-primary" href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration" style="color: white; text-decoration: none;">Configure Integration Settings</a>';
+				} else {
+					// SA integration detected but not managed by plugin
+					$html .= '<p class="text-info"><strong>JavaScript Integration Detected &nbsp;<span class="dashicons dashicons-saved"></span></strong></p>';
+				}
 			} elseif (! empty($options['integration_type']) && $options['integration_type'] == "ba") {
 				// basic
 				$html .= '<p class="text-info"><strong>Basic Integrated &nbsp;<span class="dashicons dashicons-saved"></span></strong></p>';
@@ -613,15 +656,51 @@ class Ezoic_Integration_Admin_Settings
 				// no integration detected
 				$html .= '<p class="text-danger"><strong>Waiting on Integration</strong>';
 				$html .= '<br/><br/><a class="button button-success" href="https://pubdash.ezoic.com/integration" target="_blank" style="color: white; text-decoration: none; background: #5fa624; border-color: #53951a;">Integration Options</a>&nbsp;';
-				$html .= '<a class="button button-primary" href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=integration_status&wp_integration=1" style="color: white; text-decoration: none;">Enable WordPress Integration</a>';
+
+				// Add Enable JavaScript Integration option
+				if (!get_option('ezoic_js_integration_enabled', false)) {
+					$html .= '<br/><br/><form method="post" action="" style="display: inline-block; margin-top: 10px;">';
+					$html .= wp_nonce_field('enable_js_integration_nonce', 'js_integration_nonce', true, false);
+					$html .= '<input type="hidden" name="action" value="enable_js_integration"/>';
+					$html .= '<input type="submit" class="button button-secondary" value="Enable JavaScript Integration" style="background: #0073aa; color: white; border-color: #005a87;"/>';
+					$html .= '</form><br/><br/>';
+				}
+
 				$html .= '</p>';
 			} else {
 				// wordpress
 				$html .= '<p class="text-success"><strong>WordPress Integrated &nbsp;<span class="dashicons dashicons-wordpress-alt text-success" title="WordPress Integrated"></span></strong></p>';
+
+				/* TODO: Add back switch button later
+				// Add button to switch to JavaScript Integration if not already enabled
+				if (!get_option('ezoic_js_integration_enabled', false)) {
+					$html .= '<br/><form method="post" action="" style="display: inline-block; margin-top: 10px;">';
+					$html .= wp_nonce_field('enable_js_integration_nonce', 'js_integration_nonce', true, false);
+					$html .= '<input type="hidden" name="action" value="enable_js_integration"/>';
+					$html .= '<input type="hidden" name="redirect_to_integration_tab" value="1"/>';
+					$html .= '<input type="submit" class="button button-secondary" value="Switch to JavaScript Integration" style="background: #0073aa; color: white; border-color: #005a87;"/>';
+					$html .= '</form>';
+				}
+				*/
 			}
+		} elseif (get_option('ezoic_js_integration_enabled', false)) {
+			// Manual JavaScript integration enabled via plugin (no automatic integration detected)
+			$html .= '<p class="text-info"><strong>Manual JavaScript Integration Enabled &nbsp;<span class="dashicons dashicons-saved"></span></strong></p>';
+			$html .= '<p><em>Note: Integration not yet detected by Ezoic. It may take a few minutes for changes to be recognized.</em></p>';
+			$html .= '<br/><a class="button button-primary" href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration" style="color: white; text-decoration: none;">Configure Integration Settings</a>';
 		} else {
 			$html .= '<p class="text-danger"><strong>Waiting on Integration</strong>';
 			$html .= '<br/><br/><a class="button button-success" href="https://pubdash.ezoic.com/integration" target="_blank" style="color: white; text-decoration: none; background: #5fa624; border-color: #53951a;">Integration Options</a>';
+
+			// Add Enable JavaScript Integration option
+			if (!get_option('ezoic_js_integration_enabled', false)) {
+				$html .= '<br/><br/><form method="post" action="" style="display: inline-block; margin-top: 10px;">';
+				$html .= wp_nonce_field('enable_js_integration_nonce', 'js_integration_nonce', true, false);
+				$html .= '<input type="hidden" name="action" value="enable_js_integration"/>';
+				$html .= '<input type="submit" class="button button-secondary" value="Enable JavaScript Integration" style="background: #0073aa; color: white; border-color: #005a87;"/>';
+				$html .= '</form><br/><br/>';
+			}
+
 			/*if (isset($ezoic_options['disable_wp_integration']) && $ezoic_options['disable_wp_integration'] == true) {
 				$html .= '&nbsp;<a class="button button-primary" href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=integration_status&wp_integration=1" style="color: white; text-decoration: none;">Enable WordPress Integration</a>';
 			}*/
@@ -1065,5 +1144,149 @@ class Ezoic_Integration_Admin_Settings
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Delegate JavaScript integration initialization to separate class
+	 */
+	public function initialize_js_integration_settings()
+	{
+		$this->js_integration_settings->initialize_js_integration_settings();
+	}
+
+	/**
+	 * Default JavaScript integration options
+	 */
+	private function default_js_integration_options()
+	{
+		return array(
+			'js_auto_insert_scripts' => 1,     // Default to enabled
+			'js_enable_privacy_scripts' => 1,  // Default to enabled
+			'js_use_wp_placeholders' => 0,     // Default to disabled
+		);
+	}
+
+	public function js_integration_settings_callback()
+	{
+		// This callback only runs when JS integration is enabled (when do_settings_sections is called)
+		echo '<p>' . __('Configure JavaScript integration settings for your Ezoic ads.', 'ezoic') . '</p>';
+		echo '<hr/>';
+	}
+
+	public function js_auto_insert_scripts_callback($args)
+	{
+		$options = \get_option('ezoic_js_integration_options');
+		$value = isset($options['js_auto_insert_scripts']) ? $options['js_auto_insert_scripts'] : 1;
+
+		$html = '<input type="checkbox" id="js_auto_insert_scripts" name="ezoic_js_integration_options[js_auto_insert_scripts]" value="1"' . checked(1, $value, false) . '/>';
+		$html .= '<label for="js_auto_insert_scripts">' . $args[0] . '</label>';
+
+		echo $html;
+	}
+
+	public function js_enable_privacy_scripts_callback($args)
+	{
+		$options = \get_option('ezoic_js_integration_options');
+		$value = isset($options['js_enable_privacy_scripts']) ? $options['js_enable_privacy_scripts'] : 1;
+
+		$html = '<input type="checkbox" id="js_enable_privacy_scripts" name="ezoic_js_integration_options[js_enable_privacy_scripts]" value="1"' . checked(1, $value, false) . '/>';
+		$html .= '<label for="js_enable_privacy_scripts">' . $args[0] . '</label>';
+
+		echo $html;
+	}
+
+	public function js_use_wp_placeholders_callback($args)
+	{
+		$options = \get_option('ezoic_js_integration_options');
+		$value = isset($options['js_use_wp_placeholders']) ? $options['js_use_wp_placeholders'] : 0;
+
+		$html = '<input type="checkbox" id="js_use_wp_placeholders" name="ezoic_js_integration_options[js_use_wp_placeholders]" value="1"' . checked(1, $value, false) . '/>';
+		$html .= '<label for="js_use_wp_placeholders">' . $args[0] . '</label>';
+		$html .= '<br><em>' . __('When enabled, you can use automatic placeholder insertion to place ads.', 'ezoic') . ' ';
+		$html .= '<a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=ad_settings" style="text-decoration: none;">' . __('Configure ad placements in Ad Placements &rarr;', 'ezoic') . '</a></em>';
+
+		echo $html;
+	}
+
+	/**
+	 * Handle enabling JavaScript integration
+	 */
+	public function handle_enable_js_integration()
+	{
+		if (isset($_POST['action']) && $_POST['action'] === 'enable_js_integration') {
+			if (!wp_verify_nonce($_POST['js_integration_nonce'], 'enable_js_integration_nonce')) {
+				wp_die('Security check failed');
+			}
+
+			// Enable JavaScript integration
+			update_option('ezoic_js_integration_enabled', true);
+
+			// Disable WordPress integration to prevent conflicts
+			$ezoic_options = \get_option('ezoic_integration_options');
+			if (!$ezoic_options) {
+				$ezoic_options = $this->default_advanced_options();
+			}
+			$ezoic_options['disable_wp_integration'] = true;
+			update_option('ezoic_integration_options', $ezoic_options);
+
+			// Trigger integration recheck by clearing the check time
+			$options = \get_option('ezoic_integration_status');
+			$options['check_time'] = '';
+			update_option('ezoic_integration_status', $options);
+
+			// Redirect based on where it was enabled from
+			if (isset($_POST['from_integration_tab']) || isset($_POST['redirect_to_integration_tab'])) {
+				wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_enabled=1'));
+			} else {
+				wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&js_integration_enabled=1'));
+			}
+			exit;
+		}
+	}
+
+	/**
+	 * Handle disabling JavaScript integration
+	 */
+	public function handle_disable_js_integration()
+	{
+		if (isset($_POST['action']) && $_POST['action'] === 'disable_js_integration') {
+			if (!wp_verify_nonce($_POST['js_integration_disable_nonce'], 'disable_js_integration_nonce')) {
+				wp_die('Security check failed');
+			}
+
+			// Disable JavaScript integration
+			update_option('ezoic_js_integration_enabled', false);
+
+			// Trigger integration recheck by clearing the check time
+			$options = \get_option('ezoic_integration_status');
+			$options['check_time'] = '';
+			update_option('ezoic_integration_status', $options);
+
+			// Optionally clear JavaScript integration options
+			// delete_option('ezoic_js_integration_options');
+
+			// Redirect to Integration tab
+			wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
+			exit;
+		}
+	}
+
+	public function sanitize_js_integration_options($settings)
+	{
+		// Get current options to merge with
+		$current_options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+
+		// Handle checkboxes - if not present in $settings, they were unchecked
+		$sanitized = array();
+		$sanitized['js_auto_insert_scripts'] = isset($settings['js_auto_insert_scripts']) ? 1 : 0;
+		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
+		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
+
+		// Trigger integration recheck when JS integration settings are saved
+		$options = \get_option('ezoic_integration_status');
+		$options['check_time'] = '';
+		update_option('ezoic_integration_status', $options);
+
+		return $sanitized;
 	}
 }

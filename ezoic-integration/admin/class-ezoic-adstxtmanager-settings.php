@@ -120,7 +120,7 @@ class Ezoic_AdsTxtManager_Settings
 		<?php elseif (Ezoic_AdsTxtManager::ezoic_adstxtmanager_id() == 0) : ?>
 			<div class="notice notice-error adstxtmanager_activate">
 				<p class="adstxtmanager_description">
-					<?php _e('Ezoic\'s Ads.txt redirection is not set up. Please enter your ' . EZOIC_ADSTXT_MANAGER__SITE . ' Ads.txt Manager ID or enable automatic detection.', 'ezoic'); ?>
+					<?php printf(__('Ezoic\'s Ads.txt redirection is not set up. Please enter your <a href="%s" target="_blank">Ads.txt Manager</a> ID or enable automatic detection.', 'ezoic'), EZOIC_ADSTXT_MANAGER__SITE); ?>
 				</p>
 			</div>
 		<?php endif; ?>

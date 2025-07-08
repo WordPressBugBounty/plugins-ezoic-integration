@@ -23,14 +23,14 @@ namespace Ezoic_Namespace {
 
 	$GLOBALS['ezoic_integration_buffer'] = '';
 
-	if ( ! defined( 'EZOIC_URL' ) ) {
-		define( 'EZOIC_URL', getenv( 'EZOIC_URL' ) ? getenv( 'EZOIC_URL' ) : 'https://publisherbe.ezoic.com' );
+	if (! defined('EZOIC_URL')) {
+		define('EZOIC_URL', getenv('EZOIC_URL') ? getenv('EZOIC_URL') : 'https://publisherbe.ezoic.com');
 	}
-	if ( ! defined( 'EZOIC_API_URL' ) ) {
-		define( 'EZOIC_API_URL', getenv( 'EZOIC_API_URL' ) ? getenv( 'EZOIC_API_URL' ) : 'https://api-gateway.ezoic.com' );
+	if (! defined('EZOIC_API_URL')) {
+		define('EZOIC_API_URL', getenv('EZOIC_API_URL') ? getenv('EZOIC_API_URL') : 'https://api-gateway.ezoic.com');
 	}
-	if ( ! defined( 'EZOIC_GATEWAY_URL' ) ) {
-		define( 'EZOIC_GATEWAY_URL', getenv( 'EZOIC_GATEWAY_URL' ) ? getenv( 'EZOIC_GATEWAY_URL' ) : 'https://g.ezoic.net' );
+	if (! defined('EZOIC_GATEWAY_URL')) {
+		define('EZOIC_GATEWAY_URL', getenv('EZOIC_GATEWAY_URL') ? getenv('EZOIC_GATEWAY_URL') : 'https://g.ezoic.net');
 	}
 
 	/**
@@ -47,7 +47,8 @@ namespace Ezoic_Namespace {
 	 * @subpackage Ezoic_Integration/includes
 	 * @author     Ezoic Inc. <support@ezoic.com>
 	 */
-	class Ezoic_Integration {
+	class Ezoic_Integration
+	{
 
 		/**
 		 * The loader that's responsible for maintaining and registering all hooks that power
@@ -96,8 +97,9 @@ namespace Ezoic_Namespace {
 		 *
 		 * @since    1.0.0
 		 */
-		public function __construct() {
-			if ( defined( 'EZOIC_INTEGRATION_VERSION' ) ) {
+		public function __construct()
+		{
+			if (defined('EZOIC_INTEGRATION_VERSION')) {
 				$this->version = EZOIC_INTEGRATION_VERSION;
 			} else {
 				$this->version = '1.0.0';
@@ -116,13 +118,14 @@ namespace Ezoic_Namespace {
 		 * Determines if the plugin is running the first time after activation to allow post-activation
 		 * events to run.
 		 */
-		public function after_activate() {
+		public function after_activate()
+		{
 			// Determine if this is the first "run" of the plugin
-			if ( is_admin() && \get_option( 'activated_plugin' ) == 'ezoic_integration' ) {
-				\delete_option( 'activated_plugin' );
+			if (is_admin() && \get_option('activated_plugin') == 'ezoic_integration') {
+				\delete_option('activated_plugin');
 
 				// Fire after activation event
-				\do_action( 'ez_after_activate' );
+				\do_action('ez_after_activate');
 			}
 		}
 
@@ -143,45 +146,47 @@ namespace Ezoic_Namespace {
 		 * @since    1.0.0
 		 * @access   private
 		 */
-		private function load_dependencies() {
+		private function load_dependencies()
+		{
 
 			/**
 			 * The class responsible for orchestrating the actions and filters of the
 			 * core plugin.
 			 */
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-ezoic-integration-loader.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-loader.php';
 
 			/**
 			 * The class responsible for defining internationalization functionality
 			 * of the plugin.
 			 */
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-ezoic-integration-i18n.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-i18n.php';
 
 			/**
 			 * The class responsible for defining all actions that occur in the admin area.
 			 */
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-ezoic-integration-admin.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-integration-admin.php';
 
 			/**
 			 * The class responsible for defining all actions that occur in the public-facing
 			 * side of the site.
 			 */
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-ezoic-integration-public.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'public/class-ezoic-integration-public.php';
 
 			/**
 			 * The class responsible for orchestrating the features of the
 			 * core plugin.
 			 */
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-ezoic-integration-features.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-features.php';
 
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-ezoic-speed-settings.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-speed-settings.php';
 
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-ezoic-emote-settings.php';
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-js-integration-settings.php';
+
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-emote-settings.php';
 
 
 			$this->loader   = new Ezoic_Integration_Loader();
-			$this->features = new Ezoic_Integration_Features( $this->loader );
-
+			$this->features = new Ezoic_Integration_Features($this->loader);
 		}
 
 		/**
@@ -193,12 +198,12 @@ namespace Ezoic_Namespace {
 		 * @since    1.0.0
 		 * @access   private
 		 */
-		private function set_locale() {
+		private function set_locale()
+		{
 
 			$plugin_i18n = new Ezoic_Integration_i18n();
 
-			$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
-
+			$this->loader->add_action('plugins_loaded', $plugin_i18n, 'load_plugin_textdomain');
 		}
 
 		/**
@@ -208,81 +213,86 @@ namespace Ezoic_Namespace {
 		 * @since    1.0.0
 		 * @access   private
 		 */
-		private function define_admin_hooks() {
+		private function define_admin_hooks()
+		{
 
-			$plugin_admin    = new Ezoic_Integration_Admin( $this->get_plugin_name(), $this->get_version() );
-			$plugin_settings = new Ezoic_Integration_Admin_Settings( $this->get_plugin_name(), $this->get_version() );
-			$cdn_settings    = new Ezoic_Integration_CDN_Settings( $this->get_plugin_name(), $this->get_version() );
+			$plugin_admin    = new Ezoic_Integration_Admin($this->get_plugin_name(), $this->get_version());
+			$plugin_settings = new Ezoic_Integration_Admin_Settings($this->get_plugin_name(), $this->get_version());
+			$cdn_settings    = new Ezoic_Integration_CDN_Settings($this->get_plugin_name(), $this->get_version());
 			$ad_settings     = new Ezoic_Integration_Ad_Settings();
 			$speed_settings  = new Ezoic_Speed_Settings();
 			$emote_settings  = new Ezoic_Emote_Settings();
-			$atm_settings    = new Ezoic_AdsTxtManager_Settings( $this->get_plugin_name(), $this->get_version() );
+			$atm_settings    = new Ezoic_AdsTxtManager_Settings($this->get_plugin_name(), $this->get_version());
 
-			$this->loader->add_action( 'admin_init', $this, 'after_activate' );
+			$this->loader->add_action('admin_init', $this, 'after_activate');
 
 			// only verify domains without ez header
-			if ( Ezoic_Integration_Admin::is_cloud_integrated() == false ) {
-				$this->loader->add_action( 'ez_after_activate', $plugin_admin, 'verify_domain' );
+			if (Ezoic_Integration_Admin::is_cloud_integrated() == false) {
+				$this->loader->add_action('ez_after_activate', $plugin_admin, 'verify_domain');
 			}
 
-			$this->loader->add_action( 'rest_api_init', $ad_settings, 'register_rest' );
+			$this->loader->add_action('rest_api_init', $ad_settings, 'register_rest');
 
 			// We need to make sure that caching is not enabled while a pub is using a cloud integration. If the request is
 			// coming from a cloud integrated site, we turn caching off and clean up any cache files and modifications.
-			$plugin_settings->handle_cloud_integrated_with_caching( $plugin_admin );
+			$plugin_settings->handle_cloud_integrated_with_caching($plugin_admin);
 
-			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
-			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+			$this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_styles');
+			$this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts');
 
-			$this->loader->add_action( 'admin_enqueue_scripts', $this, 'dequeue_bad_scripts', 999999 );
+			$this->loader->add_action('admin_enqueue_scripts', $this, 'dequeue_bad_scripts', 999999);
 
-			$this->loader->add_action( 'admin_menu', $plugin_settings, 'setup_plugin_options_menu' );
-			$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_display_options' );
-			$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_advanced_options' );
-			$this->loader->add_action( 'admin_init', $cdn_settings, 'initialize_cdn_settings' );
-			$this->loader->add_action( 'admin_init', $speed_settings, 'initialize_ezoic_speed_settings' );
-			$this->loader->add_action( 'admin_init', $atm_settings, 'initialize_adstxtmanager_settings' );
-			$this->loader->add_action( 'admin_init', $emote_settings, 'initialize_emote_settings' );
+			$this->loader->add_action('admin_menu', $plugin_settings, 'setup_plugin_options_menu');
+			$this->loader->add_action('admin_init', $plugin_settings, 'initialize_display_options');
+			$this->loader->add_action('admin_init', $plugin_settings, 'initialize_advanced_options');
+			$this->loader->add_action('admin_init', $plugin_settings, 'initialize_js_integration_settings');
+			$this->loader->add_action('admin_init', $plugin_settings, 'handle_enable_js_integration');
+			$this->loader->add_action('admin_init', $plugin_settings, 'handle_disable_js_integration');
+			$this->loader->add_action('admin_init', $cdn_settings, 'initialize_cdn_settings');
+			$this->loader->add_action('admin_init', $speed_settings, 'initialize_ezoic_speed_settings');
+			$this->loader->add_action('admin_init', $atm_settings, 'initialize_adstxtmanager_settings');
+			$this->loader->add_action('admin_init', $emote_settings, 'initialize_emote_settings');
 
-			$this->loader->add_action( 'admin_init', $plugin_admin, 'clear_plugin_caches' );
-			$this->loader->add_action( 'activated_plugin', $plugin_admin, 'set_cache_regenerate' );
-			$this->loader->add_action( 'deactivated_plugin', $plugin_admin, 'set_cache_regenerate' );
-			$this->loader->add_action( 'upgrader_process_complete', $plugin_admin, 'upgrade_set_cache_clear', 10, 2 );
+			$this->loader->add_action('admin_init', $plugin_admin, 'clear_plugin_caches');
+			$this->loader->add_action('activated_plugin', $plugin_admin, 'set_cache_regenerate');
+			$this->loader->add_action('deactivated_plugin', $plugin_admin, 'set_cache_regenerate');
+			$this->loader->add_action('upgrader_process_complete', $plugin_admin, 'upgrade_set_cache_clear', 10, 2);
 
-			$this->loader->add_action( 'admin_footer', $plugin_admin, 'theme_switch_notification' );
+			$this->loader->add_action('admin_footer', $plugin_admin, 'theme_switch_notification');
 
 			// Fires when advanced settings are updated
-			$this->loader->add_action( 'update_option_ezoic_integration_options', $plugin_settings, 'handle_update_ezoic_integration_options', 0, 3 );
+			$this->loader->add_action('update_option_ezoic_integration_options', $plugin_settings, 'handle_update_ezoic_integration_options', 0, 3);
 
 			// Hooks related to ezoic caching.
-			$this->loader->add_action( 'post_updated', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'comment_post', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'update_option_permalink_structure', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'save_post', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'after_delete_post', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'create_category', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'delete_category', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'create_term', $plugin_settings, 'handle_clear_cache' );
-			$this->loader->add_action( 'delete_term', $plugin_settings, 'handle_clear_cache' );
-            $this->loader->add_action( 'wp_create_nav_menu', $plugin_settings, 'handle_clear_cache' );
-            $this->loader->add_action( 'wp_update_nav_menu', $plugin_settings, 'handle_clear_cache' );
-            $this->loader->add_action( 'wp_delete_nav_menu', $plugin_settings, 'handle_clear_cache' );
+			$this->loader->add_action('post_updated', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('comment_post', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('update_option_permalink_structure', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('save_post', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('after_delete_post', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('create_category', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('delete_category', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('create_term', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('delete_term', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('wp_create_nav_menu', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('wp_update_nav_menu', $plugin_settings, 'handle_clear_cache');
+			$this->loader->add_action('wp_delete_nav_menu', $plugin_settings, 'handle_clear_cache');
 
 			// Add Settings link to the plugin.
-			$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
-			$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
+			$plugin_basename = plugin_basename(plugin_dir_path(__DIR__) . $this->plugin_name . '.php');
+			$this->loader->add_filter('plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links');
 		}
 
 		/**
 		 * Removes conflicting scripts from other plugins
 		 */
-		public function dequeue_bad_scripts() {
+		public function dequeue_bad_scripts()
+		{
 			global $pagenow;
-			if ( in_array( $pagenow, array( 'options-general.php' ) ) && ( isset( $_GET['page'] ) && $_GET['page'] == EZOIC__PLUGIN_SLUG ) ) {
-				wp_deregister_script( 'js_files_for_wp_admin' );
-				wp_deregister_script( 'vue' );
-				wp_deregister_script( 'axios' );
-				wp_deregister_script( 'vuejs' );
+			if (in_array($pagenow, array('options-general.php')) && (isset($_GET['page']) && $_GET['page'] == EZOIC__PLUGIN_SLUG)) {
+				wp_deregister_script('js_files_for_wp_admin');
+				wp_deregister_script('vue');
+				wp_deregister_script('axios');
+				wp_deregister_script('vuejs');
 			}
 		}
 
@@ -293,7 +303,8 @@ namespace Ezoic_Namespace {
 		 * @return    string    The name of the plugin.
 		 * @since     1.0.0
 		 */
-		public function get_plugin_name() {
+		public function get_plugin_name()
+		{
 			return $this->plugin_name;
 		}
 
@@ -304,19 +315,21 @@ namespace Ezoic_Namespace {
 		 * @since    1.0.0
 		 * @access   private
 		 */
-		private function define_public_hooks() {
-			if ( ( defined( 'EZOIC__DISABLE' ) && !EZOIC__DISABLE ) || ! is_admin() ) {
-				$plugin_public = new Ezoic_Integration_Public( $this->get_plugin_name(), $this->get_version() );
-				$plugin_public->register_hooks( $this->loader );
+		private function define_public_hooks()
+		{
+			if ((defined('EZOIC__DISABLE') && !EZOIC__DISABLE) || ! is_admin()) {
+				$plugin_public = new Ezoic_Integration_Public($this->get_plugin_name(), $this->get_version());
+				$plugin_public->register_hooks($this->loader);
 			}
 		}
 
 		/**
 		 * Load all rest endpoints that need to be available globally
 		 */
-		private function define_rest_endpoints() {
+		private function define_rest_endpoints()
+		{
 			$authenticator = new Ezoic_Integration_Authentication();
-			$this->loader->add_action( 'rest_api_init', $authenticator, 'register' );
+			$this->loader->add_action('rest_api_init', $authenticator, 'register');
 		}
 
 		/**
@@ -325,9 +338,10 @@ namespace Ezoic_Namespace {
 		 * @since    1.0.0
 		 * @access   private
 		 */
-		private function load_features() {
+		private function load_features()
+		{
 			// Do not activate features if the static site is requested
-			if ( defined( 'EZOIC__DISABLE' ) && EZOIC__DISABLE ) {
+			if (defined('EZOIC__DISABLE') && EZOIC__DISABLE) {
 				return;
 			}
 
@@ -344,13 +358,13 @@ namespace Ezoic_Namespace {
 				'FacebookShareCache'
 			);
 
-			foreach($features as $featureName){
+			foreach ($features as $featureName) {
 				// Enable features unless disabled by get params
-				if ( defined( 'EZOIC__DISABLE__FEATURE' ) && count(EZOIC__DISABLE__FEATURE) > 0 && in_array($featureName,EZOIC__DISABLE__FEATURE)) {
+				if (defined('EZOIC__DISABLE__FEATURE') && count(EZOIC__DISABLE__FEATURE) > 0 && in_array($featureName, EZOIC__DISABLE__FEATURE)) {
 					continue;
 				} else {
-					$fullFeatureName = 'Ezoic_Namespace\\'.$featureName;
-					$this->features->add_feature( new $fullFeatureName() );
+					$fullFeatureName = 'Ezoic_Namespace\\' . $featureName;
+					$this->features->add_feature(new $fullFeatureName());
 				}
 			}
 		}
@@ -360,7 +374,8 @@ namespace Ezoic_Namespace {
 		 *
 		 * @since    1.0.0
 		 */
-		public function run() {
+		public function run()
+		{
 			$this->features->run();
 			$this->loader->run();
 
@@ -373,7 +388,8 @@ namespace Ezoic_Namespace {
 		 * @return    Ezoic_Integration_Loader    Orchestrates the hooks of the plugin.
 		 * @since     1.0.0
 		 */
-		public function get_loader() {
+		public function get_loader()
+		{
 			return $this->loader;
 		}
 
@@ -383,9 +399,9 @@ namespace Ezoic_Namespace {
 		 * @return    string    The version number of the plugin.
 		 * @since     1.0.0
 		 */
-		public function get_version() {
+		public function get_version()
+		{
 			return $this->version;
 		}
-
 	}
 }

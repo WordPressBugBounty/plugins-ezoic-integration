@@ -239,7 +239,7 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 
 	public static function ezoic_should_show_adstxtmanager_setting()
 	{
-		if (!Ezoic_Integration_Admin::is_cloud_integrated()) {
+		if (!Ezoic_Integration_Admin::is_cloud_integrated() || Ezoic_Integration_Admin::is_javascript_integrated()) {
 			return true;
 		}
 

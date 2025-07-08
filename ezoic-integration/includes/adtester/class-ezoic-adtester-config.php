@@ -5,7 +5,8 @@ namespace Ezoic_Namespace;
 /**
  * AdTester Configuration
  */
-class Ezoic_AdTester_Config {
+class Ezoic_AdTester_Config
+{
 	const VERSION = '3';
 
 	// const config_sync_endpoint = 'http://wordpress-service.ezoic.com:5460/api/v1/wp/config';
@@ -31,8 +32,11 @@ class Ezoic_AdTester_Config {
 	public $meta_tags = array();
 	public $exclude_urls = array();
 	public $enable_adpos_integration = false;
+	public $enable_placement_id_selection = false;
+	public $active_placements = array(); // Maps position_type => position_id for active placements
 
-	public function __construct() {
+	public function __construct()
+	{
 		$this->version	= Ezoic_AdTester_Config::VERSION;
 
 		$this->reset();
@@ -41,24 +45,41 @@ class Ezoic_AdTester_Config {
 	/**
 	 * Completely resets the configuration
 	 */
-	public function reset() {
+	public function reset()
+	{
 		$this->placeholders						= array();
 		$this->placeholder_config				= array();
-		$this->parent_filters					= array( 'blockquote', 'table', '#toc_container', '#ez-toc-container' );
-		$this->paragraph_tags					= array( 'p', 'li' );
-		$this->excerpt_tags						= array( 'p' );
+		$this->parent_filters = array(
+			'blockquote',
+			'table',
+			'nav',
+			'header',
+			'footer',
+			'#toc_container',
+			'#ez-toc-container',
+			'.entry-summary',
+			'.excerpt',
+			'.entry-actions',
+			'.site-footer',
+			'.widget-area'
+		);
+		$this->paragraph_tags					= array('p', 'ul', 'ol');
+		$this->excerpt_tags						= array('p');
 		$this->sidebar_id						= 'sidebar-1';
-		$this->skip_word_count					= -1;
+		$this->skip_word_count					= 10;
 		$this->user_roles_with_ads_disabled 	= array();
 		$this->exclude_pages					= array();
 		$this->last_updated						= 0;
 		$this->enable_adpos_integration			= false;
+		$this->enable_placement_id_selection	= false;
+		$this->active_placements				= array();
 	}
 
 	/**
 	 * Clears the placeholder configuration
 	 */
-	public function resetPlaceholderConfigs() {
+	public function resetPlaceholderConfigs()
+	{
 		$this->placeholders			= array();
 		$this->placeholder_config	= array();
 	}
@@ -66,23 +87,24 @@ class Ezoic_AdTester_Config {
 	/**
 	 * Load configuration from Wordpress options
 	 */
-	public static function load() {
+	public static function load()
+	{
 		// Fetch configuration from storage
-		$encoded = \get_option( 'ez_adtester_config' );
+		$encoded = \get_option('ez_adtester_config');
 
 		// If no configuration found, return empty configuration
-		if ( $encoded == '' ) {
+		if ($encoded == '') {
 			return new Ezoic_AdTester_Config();
 		}
 
 		// Decode configuration
-		$decoded = \base64_decode( $encoded );
+		$decoded = \base64_decode($encoded);
 
 		// Deserialize configuration
-		$config = \unserialize( $decoded );
+		$config = \unserialize($decoded);
 
 		// Upgrade if needed
-		Ezoic_AdTester_Config::upgrade( $config );
+		Ezoic_AdTester_Config::upgrade($config);
 
 		return $config;
 	}
@@ -90,42 +112,44 @@ class Ezoic_AdTester_Config {
 	/**
 	 * Store configuration in Wordpress options
 	 */
-	public static function store( $config ) {
+	public static function store($config)
+	{
 		$config->last_updated = time();
 
 		// Serialize configuration
 		$serialized = \serialize($config);
 
 		// Encode configuration
-		$encoded = base64_encode( $serialized );
+		$encoded = base64_encode($serialized);
 
 		// Store configuration
-		\update_option( 'ez_adtester_config', $encoded );
+		\update_option('ez_adtester_config', $encoded);
 	}
 
 	/**
 	 * Synchronizes the configuration with the backend server (if needed)
 	 */
-	public function sync() {
+	public function sync()
+	{
 		$requestURL = Ezoic_AdTester_Config::config_sync_endpoint . '?d=' . Ezoic_Integration_Request_Utils::get_domain();
 
 		// This fixes a bug with the consistency of the data-type of skip_word_count
-		if ( \is_string( $this->skip_word_count ) ) {
-			$this->skip_word_count = \intval( $this->skip_word_count );
+		if (\is_string($this->skip_word_count)) {
+			$this->skip_word_count = \intval($this->skip_word_count);
 		}
 
-		$payload = json_encode( $this );
+		$payload = json_encode($this);
 		$requestArgs = array(
 			'method' => 'POST',
 			'timeout' => 45,
 			'headers' => array(
 				'Content-Type' => 'application/json',
-				'Content-Length' => strlen( $payload )
+				'Content-Length' => strlen($payload)
 			),
 			'body' => $payload
 		);
 
-		if ( Ezoic_Cdn::ezoic_cdn_api_key() != null ) {
+		if (Ezoic_Cdn::ezoic_cdn_api_key() != null) {
 			$token = Ezoic_Cdn::ezoic_cdn_api_key();
 			$requestURL .= '&developerKey=' . $token;
 		} else {
@@ -133,38 +157,39 @@ class Ezoic_AdTester_Config {
 		}
 
 		// If there is no token (failed authentication), then exit early
-		if ( $token == '' ) {
+		if ($token == '') {
 			return;
 		}
 
 		// Set auth token value
 		$requestArgs['headers']['Authorization'] = 'Bearer ' . $token;
-		
-		$response = wp_remote_post( $requestURL, $requestArgs );
 
-		if ( is_wp_error( $response ) ) {
-			error_log( 'Unable to sync configuration: ' . $response->get_error_message() );
+		$response = wp_remote_post($requestURL, $requestArgs);
+
+		if (is_wp_error($response)) {
+			error_log('Unable to sync configuration: ' . $response->get_error_message());
 			//throw new \Exception( $response->get_error_message() );
 		}
 
-		$responseBody = wp_remote_retrieve_body( $response );
-		$parsed_config = json_decode( $responseBody );
+		$responseBody = wp_remote_retrieve_body($response);
+		$parsed_config = json_decode($responseBody);
 
-		if ( !isset( $parsed_config ) ) {
+		if (!isset($parsed_config)) {
 			return;
 		}
 
-		if ( intval( $parsed_config->last_updated ) > intval( $this->last_updated ) ) {
-			$this->copy_config_from_array( $parsed_config );
+		if (intval($parsed_config->last_updated) > intval($this->last_updated)) {
+			$this->copy_config_from_array($parsed_config);
 
-			Ezoic_AdTester_Config::store( $this );
+			Ezoic_AdTester_Config::store($this);
 		}
 	}
 
 	/**
 	 * Merges an object containing updated configuration with existing configuration
 	 */
-	private function copy_config_from_array( $config ) {
+	private function copy_config_from_array($config)
+	{
 		$this->version = $config->version;
 		$this->last_updated = $config->last_updated;
 		$this->paragraph_tags = $config->paragraph_tags;
@@ -195,47 +220,97 @@ class Ezoic_AdTester_Config {
 	}
 
 	/**
+	 * Initialize active placements with wp_* placeholders as defaults
+	 */
+	public function initialize_active_placements($force_reset = false)
+	{
+		// Initialize if active_placements is empty OR if force_reset is true
+		if (empty($this->active_placements) || $force_reset) {
+			// Clear existing active placements if force_reset is true
+			if ($force_reset) {
+				$this->active_placements = array();
+			}
+
+			// Find all wp_* placeholders and set them as active for their position types
+			foreach ($this->placeholders as $placeholder) {
+				if (
+					strpos($placeholder->name, 'wp_') === 0 &&
+					strpos($placeholder->name, 'top_of') === false &&
+					strpos($placeholder->name, 'bottom_of') === false
+				) {
+
+					$position_type = $placeholder->position_type;
+					$position_id = $placeholder->position_id;
+
+					// Set this as the active placement for this position type
+					$this->active_placements[$position_type] = $position_id;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get the active position ID for a given position type
+	 */
+	public function get_active_placement($position_type)
+	{
+		if (isset($this->active_placements[$position_type])) {
+			return $this->active_placements[$position_type];
+		}
+		return null;
+	}
+
+	/**
+	 * Set the active position ID for a given position type
+	 */
+	public function set_active_placement($position_type, $position_id)
+	{
+		$this->active_placements[$position_type] = $position_id;
+	}
+
+	/**
 	 * Upgrade configuration object
 	 */
-	private static function upgrade( $config ) {
+	private static function upgrade($config)
+	{
 
-		$version = \intval( $config->version );
+		$version = \intval($config->version);
 
 		// Upgrade from version 1 to 2
-		if ( $version === 1 ) {
+		if ($version === 1) {
 
 			// Backup config
 			// Serialize configuration
 			$serialized = \serialize($config);
 
 			// Encode configuration
-			$encoded = base64_encode( $serialized );
+			$encoded = base64_encode($serialized);
 
 			// Store configuration
-			\update_option( 'ez_adtester_config_bak', $encoded );
+			\update_option('ez_adtester_config_bak', $encoded);
 
 			$config->version = '2';
 
-			if ( isset( $config->placeholder_config ) && \is_array( $config->placeholder_config ) ) {
+			if (isset($config->placeholder_config) && \is_array($config->placeholder_config)) {
 				// Attempt to convert XPath's to CSS selectors
-				foreach ( $config->placeholder_config as $ph_config ) {
-					if ( $ph_config->display === 'before_element' || $ph_config->display === 'after_element' ) {
+				foreach ($config->placeholder_config as $ph_config) {
+					if ($ph_config->display === 'before_element' || $ph_config->display === 'after_element') {
 						// Trim leading '/'
-						$ph_config->display_option = \substr( $ph_config->display_option, 1 );
+						$ph_config->display_option = \substr($ph_config->display_option, 1);
 
 						// Replace '/' with '>'
-						$ph_config->display_option = \str_ireplace( '/', ' > ', $ph_config->display_option );
+						$ph_config->display_option = \str_ireplace('/', ' > ', $ph_config->display_option);
 
 						// Remove [1]
-						$ph_config->display_option = \str_ireplace( '[1]', '', $ph_config->display_option );
+						$ph_config->display_option = \str_ireplace('[1]', '', $ph_config->display_option);
 
 						// Replace [\d] with :eq(\d)
-						$ph_config->display_option = \preg_replace( '/\[\d+\]/i', ':eq($0)', $ph_config->display_option );
+						$ph_config->display_option = \preg_replace('/\[\d+\]/i', ':eq($0)', $ph_config->display_option);
 					}
 				}
 			}
 
-			Ezoic_AdTester_Config::store( $config );
+			Ezoic_AdTester_Config::store($config);
 		}
 	}
 }

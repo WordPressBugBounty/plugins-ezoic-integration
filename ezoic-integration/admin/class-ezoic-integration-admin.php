@@ -285,7 +285,7 @@ class Ezoic_Integration_Admin
 		$options = \get_option('ezoic_integration_status');
 		if (
 			($cloud_integrated && empty($options['integration_type']))
-			|| ($cloud_integrated && ! empty($options['integration_type']) && in_array($options['integration_type'], array("wp", "ba")))
+			|| ($cloud_integrated && ! empty($options['integration_type']) && in_array($options['integration_type'], array("wp", "ba", "sa")))
 			|| (! $cloud_integrated && ! empty($options['integration_type']) && $options['integration_type'] == "cloud")
 		) {
 			// clear to recheck integration
@@ -333,8 +333,9 @@ class Ezoic_Integration_Admin
 		$options = \get_option('ezoic_integration_status');
 
 		if (
-			self::is_cloud_integrated() == false
-			&& self::is_wordpress_integrated() == false
+			/*self::is_cloud_integrated() == false
+			&&*/
+			self::is_wordpress_integrated() == false
 			&& ! empty($options['integration_type']) && ($options['integration_type'] == "sa")
 		) {
 			return true;

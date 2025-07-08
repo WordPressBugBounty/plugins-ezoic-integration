@@ -18,7 +18,7 @@ namespace Ezoic_Namespace;
  * Plugin Name:       Ezoic
  * Plugin URI:        https://ezoic.com/
  * Description:       Easily integrate and connect with Ezoic using WordPress. In order to activate this plugin properly you will need an Ezoic account. You can create an account here: https://pubdash.ezoic.com/join
- * Version:           2.15.3
+ * Version:           2.16.0
  * Author:            Ezoic Inc.
  * Author URI:        https://ezoic.com/
  * License:           GPL-2.0+
@@ -37,7 +37,7 @@ if (! defined('WPINC')) {
  */
 
 if (! defined('EZOIC_INTEGRATION_VERSION')) {
-	define('EZOIC_INTEGRATION_VERSION', '2.15.3'); // also update version in 'class-ezoic-integration-factory.php'.
+	define('EZOIC_INTEGRATION_VERSION', '2.16.0'); // also update version in 'class-ezoic-integration-factory.php'.
 }
 define('EZOIC__PLUGIN_NAME', 'Ezoic');
 define('EZOIC__PLUGIN_SLUG', dirname(plugin_basename(__FILE__)));
@@ -49,6 +49,11 @@ define('EZOIC__SITE_NAME', 'Ezoic');
 define('EZOIC__SITE_LOGIN', 'https://login.ezoic.com/');
 
 define('EZOIC_ADSTXT_MANAGER__PLUGIN_NAME', 'Ads.txt Manager'); // standalone ads.txt manager plugin name
+
+define('EZOIC_SA_SCRIPT_URL', '//www.ezojs.com/ezoic/sa.min.js');
+define('EZOIC_CMP_SCRIPT_URL', 'https://cmp.gatekeeperconsent.com/min.js');
+define('EZOIC_GATEKEEPER_SCRIPT_URL', 'https://the.gatekeeperconsent.com/cmp.min.js');
+
 define('EZOIC_ADSTXT_MANAGER__SITE', 'https://www.adstxtmanager.com/');
 define('EZOIC_ADSTXT_MANAGER__SITE_LOGIN', 'https://svc.adstxtmanager.com/auth/login');
 
