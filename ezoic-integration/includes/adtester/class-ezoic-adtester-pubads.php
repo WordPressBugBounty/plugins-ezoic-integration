@@ -6,7 +6,8 @@ namespace Ezoic_Namespace;
  * A data object which represents a single ad placeholder
  */
 #[\AllowDynamicProperties]
-class Ezoic_AdTester_PublisherAd {
+class Ezoic_AdTester_PublisherAd
+{
 
 	public $id;
 	public $domainId;
@@ -35,9 +36,10 @@ class Ezoic_AdTester_PublisherAd {
 	/**
 	 * Creates a placeholder based on a json payload
 	 */
-	public function __construct( $payload ) {
-		if ( $payload ) {
-			$this->set( $payload );
+	public function __construct($payload)
+	{
+		if ($payload) {
+			$this->set($payload);
 		}
 	}
 
@@ -47,9 +49,10 @@ class Ezoic_AdTester_PublisherAd {
 	 * @access private
 	 * @param array $data Array containing publisher ad collection
 	 */
-	private function set( $data ) {
-		foreach ( $data as $key => $value ) {
-			$this->{ $key } = $value;
+	private function set($data)
+	{
+		foreach ($data as $key => $value) {
+			$this->{$key} = $value;
 		}
 	}
 }
@@ -57,7 +60,8 @@ class Ezoic_AdTester_PublisherAd {
 /**
  * A data object representing a list of ad placeholders
  */
-class Ezoic_AdTester_PublisherAds {
+class Ezoic_AdTester_PublisherAds
+{
 	public $ads = array();
 	public $default_config = array();
 	public $placeholders_created = false;
@@ -67,7 +71,8 @@ class Ezoic_AdTester_PublisherAds {
 	/**
 	 * Initializes the list via a back-channel call to the backend systems
 	 */
-	public function __construct() {
+	public function __construct()
+	{
 		$token = '';
 
 		// Fetch domain and TLD (e.g. example.com from www.example.com)
@@ -77,7 +82,7 @@ class Ezoic_AdTester_PublisherAds {
 		$requestURL = Ezoic_AdTester::ADS_ENDPOINT . $domain;
 
 		// Use API Key, if available
-		if ( Ezoic_Cdn::ezoic_cdn_api_key() != null ) {
+		if (Ezoic_Cdn::ezoic_cdn_api_key() != null) {
 			$requestURL .= '&developerKey=' . Ezoic_Cdn::ezoic_cdn_api_key();
 			$token = Ezoic_Cdn::ezoic_cdn_api_key();
 		} else {
@@ -86,27 +91,27 @@ class Ezoic_AdTester_PublisherAds {
 		}
 
 		// If there is no token (failed authentication), then exit early
-		if ( $token == '' ) {
+		if ($token == '') {
 			return;
 		}
 
 		// Send request to Ezoic
-		$response = wp_remote_get( $requestURL, array(
+		$response = wp_remote_get($requestURL, array(
 			'method'	=> 'GET',
 			'timeout'	=> '10',
 			'headers'	=> array(
 				'Authentication' => 'Bearer ' . $token
 			)
-		) );
+		));
 
-		if ( !is_wp_error( $response )) {
-			$body = wp_remote_retrieve_body( $response );
+		if (!is_wp_error($response)) {
+			$body = wp_remote_retrieve_body($response);
 
 			// Deserialize response
-			$deserialized = json_decode( $body );
+			$deserialized = json_decode($body);
 
 			// Initialize $ads
-			$this->set( $deserialized );
+			$this->set($deserialized);
 		}
 	}
 
@@ -114,21 +119,22 @@ class Ezoic_AdTester_PublisherAds {
 	 * Decode publisher ads from an array
 	 *
 	 * @access private
-	 * @param array $data Array containing publisher ad collection
+	 * @param object $data Object containing publisher ad collection
 	 */
-	private function set( $data ) {
-		if ( $data ) {
+	private function set($data)
+	{
+		if ($data) {
 			// Ensure placeholders exist in payload before attempting to deserialize
-			if ( \property_exists( $data, 'placeholders' ) && isset( $data->placeholders ) ) {
+			if (\property_exists($data, 'placeholders') && isset($data->placeholders)) {
 
 				// Deserialize ads
-				foreach ( $data->placeholders as $ad ) {
-					$new_ad = new Ezoic_AdTester_PublisherAd( $ad );
+				foreach ($data->placeholders as $ad) {
+					$new_ad = new Ezoic_AdTester_PublisherAd($ad);
 					$this->ads[] = $new_ad;
 				}
 
 				// Deserialize default configuration
-				foreach ( $data->defaultConfiguration as $config ) {
+				foreach ($data->defaultConfiguration as $config) {
 					$this->default_config[] = array(
 						"page_type"			=> $config->pageType,
 						"name"				=> $config->name,
@@ -142,13 +148,13 @@ class Ezoic_AdTester_PublisherAds {
 			}
 
 			// Deserialize revenues
-			if ( isset( $data->revenues ) ) {
-				foreach ( $data->revenues as $adPositionId => $revenue ) {
-					$this->revenues[ $adPositionId ] = Ezoic_AdTester_Revenue::from_pubads( $adPositionId, $revenue );
+			if (isset($data->revenues)) {
+				foreach ($data->revenues as $adPositionId => $revenue) {
+					$this->revenues[$adPositionId] = Ezoic_AdTester_Revenue::from_pubads($adPositionId, $revenue);
 				}
 			}
 
-			if ( isset( $data->adPosService ) ) {
+			if (isset($data->adPosService)) {
 				$this->adpos_service = $data->adPosService;
 			}
 		}
@@ -157,8 +163,9 @@ class Ezoic_AdTester_PublisherAds {
 	/**
 	 * Returns the total number of ads for this domain
 	 */
-	public function count() {
-		return count( $this->ads );
+	public function count()
+	{
+		return count($this->ads);
 	}
 
 	/**
@@ -167,12 +174,13 @@ class Ezoic_AdTester_PublisherAds {
 	 * @access private
 	 * @param string $positionType Position type description
 	 */
-	public function get_embed_code($positionType) {
+	public function get_embed_code($positionType)
+	{
 		$embedCode = "";
 
-		if ( !is_null( $this->ads ) ) {
-			foreach ( $this->ads as $ad ) {
-				if ( $ad->positionType == $positionType ) {
+		if (!is_null($this->ads)) {
+			foreach ($this->ads as $ad) {
+				if ($ad->positionType == $positionType) {
 					$embedCode = $embedCode . $ad->embed_code();
 				}
 			}

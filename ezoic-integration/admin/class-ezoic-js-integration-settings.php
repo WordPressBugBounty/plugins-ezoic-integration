@@ -174,7 +174,7 @@ class Ezoic_JS_Integration_Settings
 
 			// Disable Placement Service Integration when enabling JS integration
 			// Use the proper AdTester class to load and save the configuration
-			$adtester = new \Ezoic_Namespace\Ezoic_AdTester();
+			$adtester = new Ezoic_AdTester();
 			if ($adtester->config && isset($adtester->config->enable_adpos_integration)) {
 				// Disable Placement Service Integration
 				$adtester->config->enable_adpos_integration = false;
@@ -191,6 +191,9 @@ class Ezoic_JS_Integration_Settings
 			if (false === get_option('ezoic_js_integration_options')) {
 				update_option('ezoic_js_integration_options', $this->default_js_integration_options());
 			}
+
+			// Force generate WP placeholders for JavaScript integration to ensure they're available in Ezoic backend
+			$this->force_generate_wp_placeholders_for_js_integration();
 
 			// Determine redirect tab
 			$redirect_tab = isset($_POST['from_integration_tab']) ? 'js_integration' : 'js_integration';
@@ -242,6 +245,17 @@ class Ezoic_JS_Integration_Settings
 		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
 		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
 
+		// Check if WP placeholders setting was just enabled
+		$wp_placeholders_just_enabled =
+			!isset($current_options['js_use_wp_placeholders']) ||
+			!$current_options['js_use_wp_placeholders'] &&
+			$sanitized['js_use_wp_placeholders'];
+
+		// If WP placeholders were just enabled and JS integration is active, force generate placeholders
+		if ($wp_placeholders_just_enabled && get_option('ezoic_js_integration_enabled', false)) {
+			$this->force_generate_wp_placeholders_for_js_integration();
+		}
+
 		// Trigger integration recheck if any settings changed
 		if ($sanitized !== $current_options) {
 			$options = get_option('ezoic_integration_status');
@@ -292,7 +306,7 @@ class Ezoic_JS_Integration_Settings
 	{
 		// Check if WordPress integration is active and show recommendation
 		$wp_integration_active = !get_option('ezoic_js_integration_enabled', false) &&
-			\Ezoic_Namespace\Ezoic_Integration_Admin::is_wordpress_integrated();
+			Ezoic_Integration_Admin::is_wordpress_integrated();
 
 		// Show recommendation message if WordPress integration is active
 		if ($wp_integration_active && !get_option('ezoic_js_integration_enabled', false)) {
@@ -317,7 +331,7 @@ class Ezoic_JS_Integration_Settings
 			submit_button('Save Settings');
 		} else {
 			// Check if site is cloud integrated and show warning
-			if (\Ezoic_Namespace\Ezoic_Integration_Admin::is_cloud_integrated()) {
+			if (Ezoic_Integration_Admin::is_cloud_integrated()) {
 				echo '<div class="notice notice-warning" style="margin: 20px 0; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107;">';
 				echo '<h4 style="margin-top: 0; color: #856404;"><span class="dashicons dashicons-warning" style="vertical-align: middle; margin-right: 5px;"></span>' . __('Cloud Integration Active', 'ezoic') . '</h4>';
 				echo '<p>' . __('Your site is using Ezoic Cloud Integration, which already handles script delivery. Enabling JavaScript Integration may cause conflicts.', 'ezoic') . '</p>';
@@ -342,6 +356,9 @@ class Ezoic_JS_Integration_Settings
 	public function render_help_section()
 	{
 		if (get_option('ezoic_js_integration_enabled', false)) {
+			// Get JS integration options to check if auto-insert scripts is enabled
+			$js_options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+			$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
 ?>
 			<div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
 				<div style="margin-bottom: 15px;">
@@ -350,10 +367,12 @@ class Ezoic_JS_Integration_Settings
 						<span class="dashicons dashicons-external" style="vertical-align: middle; margin-right: 5px;"></span>
 						<?php _e('JavaScript Integration Documentation', 'ezoic'); ?>
 					</a>
-					<a href="<?php echo esc_url(home_url('?ez_js_debugger=1')); ?>" target="_blank" class="button button-secondary">
-						<span class="dashicons dashicons-admin-tools" style="vertical-align: middle; margin-right: 5px;"></span>
-						<?php _e('Open Debugger', 'ezoic'); ?>
-					</a>
+					<?php if ($auto_insert_enabled): ?>
+						<a href="<?php echo esc_url(home_url('?ez_js_debugger=1')); ?>" target="_blank" class="button button-secondary">
+							<span class="dashicons dashicons-admin-tools" style="vertical-align: middle; margin-right: 5px;"></span>
+							<?php _e('Open Debugger', 'ezoic'); ?>
+						</a>
+					<?php endif; ?>
 				</div>
 				<p style="color: #666;"><?php _e('Turn off automatic JavaScript integration.', 'ezoic'); ?></p>
 				<form method="post" action="<?php echo admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration'); ?>" style="display: inline;">
@@ -363,6 +382,24 @@ class Ezoic_JS_Integration_Settings
 				</form>
 			</div>
 <?php
+		}
+	}
+
+	/**
+	 * Force generate WP placeholders when JavaScript integration is enabled
+	 * This ensures that WP placeholders are available in the Ezoic backend for JS integration to use
+	 */
+	private function force_generate_wp_placeholders_for_js_integration()
+	{
+		try {
+			// Use the existing AdTester force generation functionality
+			$adtester = new Ezoic_AdTester();
+			$adtester->force_generate_placeholders();
+
+			return true;
+		} catch (\Exception $e) {
+			Ezoic_AdTester::log('JS Integration: Failed to force generate WP placeholders: ' . $e->getMessage());
+			return false;
 		}
 	}
 }

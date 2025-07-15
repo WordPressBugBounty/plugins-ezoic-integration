@@ -197,30 +197,11 @@ class Ezoic_AdTester_Config
 		$this->parent_filters = $config->parent_filters;
 		$this->skip_word_count = $config->skip_word_count;
 		$this->sidebar_id = $config->sidebar_id;
-
-		// $phConfigs = array();
-
-		// // Index incoming placeholder configurations
-		// foreach ( $config->placeholder_config as $phConfig ) {
-		// 	$key = $phConfig->page_type . '_' . $this->placeholders[ $phConfig->placeholder_id ]->position_type;
-
-		// 	$phConfigs[ $key ] = $phConfig;
-		// }
-
-		// // Update any placeholder configuration changes
-		// foreach ( $this->placeholder_config as $oldConfig ) {
-		// 	$key = $oldConfig->page_type . '_' . $this->placeholders[ $oldConfig->placeholder_id ]->position_type;
-		// 	$newConfig = $phConfigs[ $key ];
-
-		// 	if ( $oldConfig->display !== $newConfig->display || $oldConfig->display_option !== $newConfig->display_option ) {
-		// 		$oldConfig->display = $newConfig->display;
-		// 		$oldConfig->display_option = $newConfig->display_option;
-		// 	}
-		// }
 	}
 
 	/**
 	 * Initialize active placements with wp_* placeholders as defaults
+	 * Stores as associative array keyed by positionType for frontend compatibility
 	 */
 	public function initialize_active_placements($force_reset = false)
 	{
@@ -233,17 +214,15 @@ class Ezoic_AdTester_Config
 
 			// Find all wp_* placeholders and set them as active for their position types
 			foreach ($this->placeholders as $placeholder) {
-				if (
-					strpos($placeholder->name, 'wp_') === 0 &&
-					strpos($placeholder->name, 'top_of') === false &&
-					strpos($placeholder->name, 'bottom_of') === false
-				) {
+				if (strpos($placeholder->name, 'wp_') === 0) {
 
 					$position_type = $placeholder->position_type;
-					$position_id = $placeholder->position_id;
 
-					// Set this as the active placement for this position type
-					$this->active_placements[$position_type] = $position_id;
+					// Only add if this position type doesn't already have an active placement
+					if (!isset($this->active_placements[$position_type])) {
+						// Store the position ID directly for frontend compatibility
+						$this->active_placements[$position_type] = intval($placeholder->position_id);
+					}
 				}
 			}
 		}

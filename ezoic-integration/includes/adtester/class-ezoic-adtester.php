@@ -136,12 +136,12 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		// Update placeholders
 		foreach ($publisher_ads->ads as $ad) {
-			// Cannot configure Ad Picker placeholders
-			// Skip if empty ID, Ad Picker, or bottom_floating
+			// Skip if empty ID or bottom_floating
+			// Skip AdPicker placements unless Select Placement ID is enabled
 			if (
 				$ad->id == ''
-				|| 	(isset($ad->isAdPicker) && $ad->isAdPicker)
 				|| 	$ad->positionType == 'bottom_floating'
+				|| 	(isset($ad->isAdPicker) && $ad->isAdPicker && $this->config->enable_placement_id_selection !== true)
 			) {
 				continue;
 			}
@@ -491,7 +491,7 @@ class Ezoic_AdTester extends Ezoic_Feature
 		if (isset($_POST['ez_wp_select_element'])) {
 			$this->do_insert = false;
 
-			self::log('element select mode');
+			//self::log('element select mode');
 
 			// Remove admin bar
 			\add_filter('show_admin_bar', '__return_false');

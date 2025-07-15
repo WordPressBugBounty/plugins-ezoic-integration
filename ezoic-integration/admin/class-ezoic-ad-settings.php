@@ -193,7 +193,50 @@ class Ezoic_Integration_Ad_Settings
 			$dateTo = $_GET['dateTo'];
 		}
 
-		return $this->adtester->retrieve_placeholders($dateFrom, $dateTo);
+		$response = $this->adtester->retrieve_placeholders($dateFrom, $dateTo);
+
+		// Add activePlacements for debugging
+		if ($response instanceof \WP_REST_Response && $response->get_status() === 200) {
+			$data = $response->get_data();
+			if (isset($data['body_response'])) {
+				$body = json_decode($data['body_response'], true);
+				if ($body && is_array($body)) {
+					// Add comprehensive debug information
+					$debug_info = array(
+						'activePlacements' => $this->adtester->config->active_placements,
+						'enablePlacementIdSelection' => $this->adtester->config->enable_placement_id_selection,
+						'totalPlaceholders' => count($this->adtester->config->placeholders),
+						'wpPlaceholders' => array(),
+						'allPositionTypes' => array()
+					);
+
+					// Analyze wp_* placeholders
+					foreach ($this->adtester->config->placeholders as $placeholder) {
+						$debug_info['allPositionTypes'][] = array(
+							'id' => $placeholder->id,
+							'positionId' => $placeholder->position_id,
+							'positionType' => $placeholder->position_type,
+							'name' => $placeholder->name
+						);
+
+						if (strpos($placeholder->name, 'wp_') === 0) {
+							$debug_info['wpPlaceholders'][] = array(
+								'id' => $placeholder->id,
+								'positionId' => $placeholder->position_id,
+								'positionType' => $placeholder->position_type,
+								'name' => $placeholder->name
+							);
+						}
+					}
+
+					$body['debugInfo'] = $debug_info;
+					$data['body_response'] = json_encode($body);
+					$response->set_data($data);
+				}
+			}
+		}
+
+		return $response;
 	}
 
 	/**
@@ -286,7 +329,7 @@ class Ezoic_Integration_Ad_Settings
 			$config->placeholder_config[] = $edit_config;
 		}
 
-		Ezoic_AdTester::log('saving new rule');
+		//Ezoic_AdTester::log('saving new rule');
 
 		// Save configuration
 		$this->adtester->update_config();
@@ -655,6 +698,7 @@ class Ezoic_Integration_Ad_Settings
 				"placeholders": [
 					<?php echo implode(',', $placeholderArray); ?>
 				],
+				"revenues": <?php echo \json_encode($this->adtester->revenues); ?>,
 				"general": {
 					"paragraphTags": <?php echo $paragraphTags ?>,
 					"excerptTags": <?php echo $excerptTags ?>,
@@ -727,6 +771,7 @@ class Ezoic_Integration_Ad_Settings
 		return array(
 			'placeholderConfig' => $configArray,
 			'placeholders' => $placeholderArray,
+			'revenues' => $this->adtester->revenues,
 			'activePlacements' => $this->adtester->config->active_placements
 		);
 	}

@@ -1162,7 +1162,7 @@ class Ezoic_Integration_Admin_Settings
 		return array(
 			'js_auto_insert_scripts' => 1,     // Default to enabled
 			'js_enable_privacy_scripts' => 1,  // Default to enabled
-			'js_use_wp_placeholders' => 0,     // Default to disabled
+			'js_use_wp_placeholders' => 1,     // Default to enabled
 		);
 	}
 
@@ -1229,6 +1229,9 @@ class Ezoic_Integration_Admin_Settings
 			$ezoic_options['disable_wp_integration'] = true;
 			update_option('ezoic_integration_options', $ezoic_options);
 
+			// Force generate WP placeholders for JavaScript integration to ensure they're available in Ezoic backend
+			$this->force_generate_wp_placeholders_for_js_integration();
+
 			// Trigger integration recheck by clearing the check time
 			$options = \get_option('ezoic_integration_status');
 			$options['check_time'] = '';
@@ -1288,5 +1291,22 @@ class Ezoic_Integration_Admin_Settings
 		update_option('ezoic_integration_status', $options);
 
 		return $sanitized;
+	}
+	/**
+	 * Force generate WP placeholders when JavaScript integration is enabled
+	 * This ensures that WP placeholders are available in the Ezoic backend for JS integration to use
+	 */
+	private function force_generate_wp_placeholders_for_js_integration()
+	{
+		try {
+			// Use the existing AdTester force generation functionality
+			$adtester = new \Ezoic_Namespace\Ezoic_AdTester();
+			$adtester->force_generate_placeholders();
+
+			return true;
+		} catch (\Exception $e) {
+			error_log('Ezoic JS Integration: Failed to force generate WP placeholders: ' . $e->getMessage());
+			return false;
+		}
 	}
 }

@@ -16,21 +16,21 @@ Ezoic plugin provides a simple and intuitive way to integrate and connect with t
 
 The Ezoic plugin provides WordPress publishers with essential features for integrating with the Ezoic ad optimization platform. This includes:
 
-* **Automatic Ezoic ad placeholder insertion and management**
-* **Advanced ad testing and optimization capabilities**
-* **Revenue tracking and performance analytics**
-* **Detection of conflicting plugins or WordPress theme settings**
-* **Create, manage, and validate your ads.txt**
-* **Quick, simple setup with our JavaScript integration option**
+* **Insert Ezoic's JavaScript code directly via plugin for seamless integration and setup**
+* **Automatically insert and manage Ezoic ad placeholders**
+* **Advanced ad testing and multivariate optimization capabilities**
+* **Real-time revenue tracking and performance analytics**
+* **Identifies and alerts for conflicting plugins or WordPress theme settings**
+* **Create, manage, and validate your ads.txt file effortlessly**
 
-Ezoic is an AI-powered ad revenue optimization platform that helps publishers increase their ad earnings through automated testing and intelligent ad placement. The platform uses machine learning to test different ad combinations, sizes, and locations to find the highest-earning setup for your specific audience.
+Ezoic is an AI-driven platform that helps publishers maximize ad revenue through intelligent automation and optimization. Using advanced machine learning, Ezoic tests and adapts ad combinations, sizes, and placements in real time to deliver the highest-earning experience for each unique visitor. The platform simplifies monetization by automating decisions that enhance user experience and increase earnings.
 
 **Key Benefits:**
-- Increase ad revenue through AI-powered testing
-- Improve user experience with optimized ad placements
-- Access to premium demand sources
-- Detailed analytics and reporting
-- Complete control over ad settings
+- Boost ad revenue with AI-powered testing and optimization
+- Protect and improve user experience through adaptive ad delivery
+- Tap into premium advertiser demand and exclusive networks
+- Gain insights with comprehensive analytics and reporting tools
+- Maintain full control over ad settings and customization
 
 Ezoic serves publishers of all sizes, from individual bloggers to major media companies, helping them maximize their advertising revenue while maintaining a positive user experience.
 
@@ -42,11 +42,11 @@ The plugin can be installed by downloading it from the WordPress plugin reposito
 
 **Getting Started with Ezoic:**
 
-1. **Sign Up:** Create a free Ezoic account at [https://www.ezoic.com](https://www.ezoic.com)
-2. **Add Your Site:** Register your website domain in your Ezoic dashboard
+1. **Sign Up:** Create your free account at [https://www.ezoic.com](https://www.ezoic.com)
+2. **Add Your Site:** Register your website domain inside your Ezoic dashboard
 3. **Install the Plugin:** Download and activate the Ezoic WordPress plugin
-4. **Configure Integration:** Quick, easy setup with our JavaScript integration
-5. **Set Up Ad Placements:** Use the plugin's ad placement tools to position ads on your site
+4. **Configure Integration:** Complete a quick setup to automatically insert Ezoic's JavaScript code into your site
+5. **Configure Ad Placements:** Ezoic automatically adds a recommended set of intelligent ad placeholders. You can optionally adjust where they appear using the plugin's ad placement tools.
 
 ---
 
@@ -110,6 +110,9 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.16.1 =
+* Improved ad placement controls and better ad display organization
+
 = 2.16.0 =
 * Automated JavaScript integration with configurable settings
 
