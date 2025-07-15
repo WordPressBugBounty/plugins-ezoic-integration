@@ -7,6 +7,9 @@ class Ezoic_AdTester_Placeholder
 	const EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s --><div id="ezoic-pub-ad-placeholder-%d" %s data-inserter-version="%d"></div><!-- End Ezoic - %s - %s -->';
 	const JS_EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s --><div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d"></div><script data-ezoic="1">ezstandalone.cmd.push(function () { ezstandalone.showAds(%d); });</script><!-- End Ezoic - %s - %s -->';
 
+	// Track if any JS placeholders have been inserted
+	private static $js_placeholders_inserted = false;
+
 	public $id;
 	public $position_id;
 	public $position_type;
@@ -45,6 +48,9 @@ class Ezoic_AdTester_Placeholder
 		$use_js_placeholders = $js_integration_enabled && isset($js_options['js_use_wp_placeholders']) && $js_options['js_use_wp_placeholders'];
 
 		if ($use_js_placeholders) {
+			// Mark that a JS placeholder was inserted
+			self::$js_placeholders_inserted = true;
+
 			// Return JavaScript ad code for JS integration
 			$dataAttr = "";
 			if ($this->is_video_placeholder) {
@@ -77,5 +83,21 @@ class Ezoic_AdTester_Placeholder
 		$placeholder = new Ezoic_AdTester_Placeholder($ad->id, $ad->adPositionId, $ad->name, $ad->positionType, $ad->isVideoPlaceholder);
 
 		return $placeholder;
+	}
+
+	/**
+	 * Check if any JS placeholders have been inserted on this page
+	 */
+	public static function js_placeholders_inserted()
+	{
+		return self::$js_placeholders_inserted;
+	}
+
+	/**
+	 * Reset the JS placeholders tracking (useful for testing or page resets)
+	 */
+	public static function reset_js_placeholders_tracking()
+	{
+		self::$js_placeholders_inserted = false;
 	}
 }

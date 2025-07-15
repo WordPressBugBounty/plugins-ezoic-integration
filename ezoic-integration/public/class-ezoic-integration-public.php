@@ -323,6 +323,11 @@ class Ezoic_Integration_Public
 		if (isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) {
 			$this->loader->add_action('wp_head', $this, 'inject_privacy_scripts', 5);
 		}
+
+		// Add fallback showAds() call in footer if no placeholders were inserted
+		if (isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) {
+			$this->loader->add_action('wp_footer', $this, 'inject_fallback_showads', 15);
+		}
 	}
 
 	/**
@@ -346,6 +351,18 @@ class Ezoic_Integration_Public
 		// Privacy/CMP scripts (must load first)
 		echo '<script src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
 		echo '<script src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
+	}
+
+	/**
+	 * Inject fallback showAds() call if no placeholders were inserted on the page
+	 */
+	public function inject_fallback_showads()
+	{
+		// Check if any Ezoic JS placeholders were inserted using the class method
+		if (!Ezoic_AdTester_Placeholder::js_placeholders_inserted()) {
+			// No JS placeholders were inserted, add fallback showAds() call
+			echo '<script data-ezoic="1">ezstandalone.cmd.push(function () { ezstandalone.showAds(); });</script>' . "\n";
+		}
 	}
 
 	private function bypass_cache_filters()
