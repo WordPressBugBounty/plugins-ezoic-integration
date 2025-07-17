@@ -165,10 +165,20 @@ class Ezoic_AdTester extends Ezoic_Feature
 				$this->config->placeholders[$ad->id]->is_video_placeholder = $ad->isVideoPlaceholder;
 			}
 
-			// Add default configuration
+			// Add default configuration for new placeholders or existing wp_ placeholders without config
 			foreach ($publisher_ads->default_config as $default_config) {
 				if ($default_config['position_type'] == $ad->positionType) {
-					if ($is_new) {
+					// Check if this placeholder already has a configuration for this page type
+					$has_existing_config = false;
+					foreach ($this->config->placeholder_config as $existing_config) {
+						if ($existing_config->placeholder_id == $ad->id && $existing_config->page_type == $default_config['page_type']) {
+							$has_existing_config = true;
+							break;
+						}
+					}
+
+					// Add default config if placeholder is new OR it's a wp_ placeholder without existing config
+					if ($is_new || (!$has_existing_config && \ez_strpos($ad->name, 'wp_') === 0)) {
 						$this->config->placeholder_config[] = new Ezoic_AdTester_Placeholder_Config($default_config['page_type'], $ad->id, $default_config['display'], $default_config['display_option'], true);
 					}
 				}
@@ -188,6 +198,62 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		// Store config
 		$this->update_config();
+	}
+
+	/**
+	 * Generate missing default configurations for wp_ placeholders
+	 * This method can be called to fix placeholders that are showing as disabled
+	 */
+	public function generate_missing_wp_configs()
+	{
+		// Fetch fresh publisher ads data to get default configs
+		$publisher_ads = new Ezoic_AdTester_PublisherAds();
+
+		// Only proceed if we have default config data
+		if (empty($publisher_ads->default_config)) {
+			//self::log('Cannot generate missing configs: No default configuration data available');
+			return false;
+		}
+
+		$configs_added = 0;
+
+		// Loop through all wp_ placeholders
+		foreach ($this->config->placeholders as $placeholder_id => $placeholder) {
+			if (\ez_strpos($placeholder->name, 'wp_') === 0) {
+				// Check each default config to see if we need to add it
+				foreach ($publisher_ads->default_config as $default_config) {
+					if ($default_config['position_type'] == $placeholder->position_type) {
+						// Check if this placeholder already has a configuration for this page type
+						$has_existing_config = false;
+						foreach ($this->config->placeholder_config as $existing_config) {
+							if ($existing_config->placeholder_id == $placeholder_id && $existing_config->page_type == $default_config['page_type']) {
+								$has_existing_config = true;
+								break;
+							}
+						}
+
+						// Add default config if missing
+						if (!$has_existing_config) {
+							$this->config->placeholder_config[] = new Ezoic_AdTester_Placeholder_Config(
+								$default_config['page_type'],
+								$placeholder_id,
+								$default_config['display'],
+								$default_config['display_option'],
+								true
+							);
+							$configs_added++;
+						}
+					}
+				}
+			}
+		}
+
+		if ($configs_added > 0) {
+			$this->update_config();
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 

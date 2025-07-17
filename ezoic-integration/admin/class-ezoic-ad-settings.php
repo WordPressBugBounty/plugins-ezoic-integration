@@ -240,7 +240,7 @@ class Ezoic_Integration_Ad_Settings
 	}
 
 	/**
-	 * Clears recommended configuration
+	 * Clears recommended configuration and regenerates missing wp_ placeholder configs
 	 */
 	public function clear_default_configuration()
 	{
@@ -258,6 +258,16 @@ class Ezoic_Integration_Ad_Settings
 		$this->adtester->config->placeholder_config = $new_config;
 
 		Ezoic_AdTester::log('clearing default config');
+
+		// After clearing defaults, regenerate missing configurations for wp_ placeholders
+		try {
+			$generated = $this->adtester->generate_missing_wp_configs();
+			if ($generated) {
+				//Ezoic_AdTester::log('Generated missing wp_ placeholder configurations after clearing defaults');
+			}
+		} catch (\Exception $e) {
+			Ezoic_AdTester::log('Error generating missing wp_ configs: ' . $e->getMessage());
+		}
 
 		$this->adtester->update_config();
 	}

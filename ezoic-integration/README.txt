@@ -110,6 +110,10 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.16.3 =
+* Enhance ad placement selections
+* Minor bug fixes and optimizations
+
 = 2.16.2 =
 * Improved ad display reliability
 
@@ -142,15 +146,3 @@ Yes, you have full control over ad categories and can block specific ads. The pl
 
 = 2.14.0 =
 * Improved cache clearing
-
-= 2.13.2 =
-* Minor bug fixes
-
-= 2.12.2 =
-* Added Debugging logs
-
-= 2.12.1 =
-* Minor bug fixes
-
-= 2.12.0 =
-* Added Support for ad placeholders to be used as humix placeholders
