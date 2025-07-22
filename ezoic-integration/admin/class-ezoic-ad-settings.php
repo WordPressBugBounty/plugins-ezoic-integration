@@ -257,7 +257,8 @@ class Ezoic_Integration_Ad_Settings
 
 		$this->adtester->config->placeholder_config = $new_config;
 
-		Ezoic_AdTester::log('clearing default config');
+		// Reset active placements to original API data
+		$this->reset_active_placements_to_original();
 
 		// After clearing defaults, regenerate missing configurations for wp_ placeholders
 		try {
@@ -273,14 +274,50 @@ class Ezoic_Integration_Ad_Settings
 	}
 
 	/**
+	 * Reset active placements to match original API placeholder data
+	 */
+	private function reset_active_placements_to_original()
+	{
+		// Clear existing active placements
+		$this->adtester->config->active_placements = [];
+
+		// Get all placeholders from API
+		$placeholders = $this->adtester->config->placeholders;
+
+		// If no placeholders available, try to fetch them from API
+		if (!$placeholders || !is_array($placeholders)) {
+			$this->adtester->initialize_config(); // Force refresh
+			$placeholders = $this->adtester->config->placeholders;
+		}
+
+		if (!$placeholders || !is_array($placeholders)) {
+			Ezoic_AdTester::log('Failed to get placeholders for resetting active placements');
+			return;
+		}
+
+		// Build a mapping using wp_* placeholders to get the correct position IDs
+		// This ensures we use the original WordPress placeholder mappings
+		foreach ($placeholders as $placeholder) {
+			// Only use wp_* placeholders to establish the correct mappings
+			if (strpos($placeholder->name, 'wp_') === 0) {
+				$position_type = $placeholder->position_type;
+				$this->adtester->config->active_placements[$position_type] = $placeholder->position_id;
+			}
+		}
+	}
+
+	/**
 	 * Resets any configuration set for ad placeholders
 	 */
 	public function reset_settings()
 	{
 		$this->initialize();
 
-		// Reset configuration
+		// Reset configuration (this will clear active_placements and other settings)
 		$this->adtester->config->reset();
+
+		// Reset active placements to original API data (this will rebuild active_placements)
+		$this->reset_active_placements_to_original();
 
 		Ezoic_AdTester::log('resetting settings');
 
