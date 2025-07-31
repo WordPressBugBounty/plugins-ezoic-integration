@@ -317,10 +317,33 @@ namespace Ezoic_Namespace {
 		 */
 		private function define_public_hooks()
 		{
-			if ((defined('EZOIC__DISABLE') && !EZOIC__DISABLE) || ! is_admin()) {
+			// Check if preview mode is requested
+			$is_preview_mode = self::is_js_preview_mode();
+
+			$is_admin = is_admin();
+			$is_disabled = defined('EZOIC__DISABLE') && EZOIC__DISABLE;
+			$should_load = (!$is_disabled && !$is_admin) || $is_preview_mode;
+
+			// Load public hooks on frontend pages when not disabled, or in preview mode
+			if ($should_load) {
 				$plugin_public = new Ezoic_Integration_Public($this->get_plugin_name(), $this->get_version());
 				$plugin_public->register_hooks($this->loader);
 			}
+		}
+
+		/**
+		 * Check if JavaScript preview mode is active via URL parameter or cookie
+		 * Static method that can be used by both classes
+		 */
+		public static function is_js_preview_mode()
+		{
+			// Check URL parameter first (takes priority)
+			if (isset($_GET['ez_js_preview'])) {
+				return $_GET['ez_js_preview'] == '1';
+			}
+
+			// Check cookie if URL parameter not present
+			return isset($_COOKIE['ez_js_preview']) && $_COOKIE['ez_js_preview'] == '1';
 		}
 
 		/**

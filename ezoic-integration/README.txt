@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, revenue, optimization, ad testing, saas, analytics, video
 Requires at least: 5.2.0
-Tested up to: 6.8.1
+Tested up to: 6.8.2
 Requires PHP: 5.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -110,6 +110,10 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.16.5 =
+* Add JavaScript integration preview features
+* Enhance HTML ad placement insertion capabilities
+
 = 2.16.4 =
 * Minor bug fixes
 

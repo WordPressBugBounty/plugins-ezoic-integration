@@ -23,6 +23,44 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 	}
 
 	/**
+	 * Protect JavaScript and other content from phpQuery HTML parsing
+	 */
+	private function protect_js_content($content, &$protected_content)
+	{
+		$protected_content = array();
+		$counter = 0;
+
+		// 1. Protect <script> tags (most common case)
+		$content = preg_replace_callback('/<script\b[^>]*>(.*?)<\/script>/is', function ($matches) use (&$protected_content, &$counter) {
+			$placeholder_id = 'EZOIC_SCRIPT_' . $counter . '_PLACEHOLDER';
+			$protected_content[$placeholder_id] = $matches[0];
+			$counter++;
+			return '<!--' . $placeholder_id . '-->';
+		}, $content);
+
+		// 2. Protect <style> tags (can contain content with HTML-like strings)
+		$content = preg_replace_callback('/<style\b[^>]*>(.*?)<\/style>/is', function ($matches) use (&$protected_content, &$counter) {
+			$placeholder_id = 'EZOIC_STYLE_' . $counter . '_PLACEHOLDER';
+			$protected_content[$placeholder_id] = $matches[0];
+			$counter++;
+			return '<!--' . $placeholder_id . '-->';
+		}, $content);
+
+		return $content;
+	}
+	/**
+	 * Restore protected JavaScript content
+	 */
+	private function restore_js_content($content, $protected_content)
+	{
+		foreach ($protected_content as $placeholder_id => $original_content) {
+			// For script/style tags, restore as HTML comments
+			$content = str_replace('<!--' . $placeholder_id . '-->', $original_content, $content);
+		}
+		return $content;
+	}
+
+	/**
 	 * Perform a server-side element insertion
 	 */
 	public function insert_server($content)
@@ -48,14 +86,23 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 		// Pull-in phpQuery to parse the document
 		require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
 
+		// Protect JavaScript and style content from phpQuery HTML parsing
+		$protected_content = array();
+		$body_content = $this->protect_js_content($body_tag_matches[2], $protected_content);
 
-		// Parse document
+		// Parse only the body content with phpQuery
 		\libxml_use_internal_errors(true);
-		$content = \phpQuery::newDocumentHTML($body_tag_matches[2]);
+		try {
+			$doc = \phpQuery::newDocument($body_content);
+			$content = $doc;
+		} catch (\Exception $e) {
+			Ezoic_AdTester::log("phpQuery parsing failed: " . $e->getMessage());
+			return $body_tag_matches[0] . $body_tag_matches[1] . $body_content;
+		}
 		\libxml_use_internal_errors(false);
 
 		foreach ($rules as $rule) {
-			$nodes = @\pq($rule->display_option);
+			$nodes = @\pq($rule->display_option, $doc);
 
 			foreach ($nodes as $found_node) {
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
@@ -68,7 +115,12 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			}
 		}
 
-		return $body_tag_matches[0] . $body_tag_matches[1] . $content->htmlOuter();
+		$processed_content = $content->html();
+
+		// Restore protected JavaScript and style content
+		$processed_content = $this->restore_js_content($processed_content, $protected_content);
+
+		return $body_tag_matches[0] . $body_tag_matches[1] . $processed_content;
 	}
 
 	/**

@@ -107,9 +107,18 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 
 				// if open tag, need make sure the tag ends, e.g. <p vs <pre
 				if ($open_tag) {
-					$next_char = $content[$offset + \ez_strlen($paragraph_tag)];
-					if ($next_char !== '>' && !\ez_ctype_space($next_char)) {
-						continue;
+					$next_char_pos = $offset + \ez_strlen($paragraph_tag);
+					if ($next_char_pos < $content_length) {
+						$next_char = $content[$next_char_pos];
+						if ($next_char !== '>' && !\ez_ctype_space($next_char)) {
+							continue;
+						}
+
+						// Additional validation: ensure we're at the start of a tag, not inside an attribute
+						// Check that the character before our match is '<'
+						if ($offset > 0 && $content[$offset - 1] !== '<') {
+							continue; // Skip this match as it's not at the start of a tag
+						}
 					}
 				}
 

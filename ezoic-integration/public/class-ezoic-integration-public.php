@@ -60,6 +60,9 @@ class Ezoic_Integration_Public
 
 		$this->bypass_cache_filters();
 
+		$preview_mode = $this->is_js_preview_mode();
+
+
 		if (isset($_SERVER['HTTP_X_EZOIC_MICRODATA']) && $_SERVER['HTTP_X_EZOIC_MICRODATA'] == 'true') {
 			$this->register_ez_hooks();
 
@@ -73,8 +76,13 @@ class Ezoic_Integration_Public
 		$this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_styles');
 		$this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_scripts');
 
-		// Add JavaScript integration hooks if enabled
-		if (get_option('ezoic_js_integration_enabled', false)) {
+		// Handle preview mode cookie setting on init hook (WordPress standard for URL parameters)
+		$this->loader->add_action('init', $this, 'handle_preview_mode_cookie');
+
+		// Add JavaScript integration hooks if enabled OR if ez_js_preview parameter is present
+		// Preview mode should work regardless of settings or cloud integration status
+		$js_enabled = get_option('ezoic_js_integration_enabled', false);
+		if ($js_enabled || $preview_mode) {
 			$this->register_js_integration_hooks();
 		}
 
@@ -308,24 +316,58 @@ class Ezoic_Integration_Public
 	}
 
 	/**
+	 * Check if JavaScript preview mode is active via URL parameter or cookie
+	 */
+	private function is_js_preview_mode()
+	{
+		return Ezoic_Integration::is_js_preview_mode();
+	}
+
+	/**
+	 * Handle preview mode cookie setting during init (before headers are sent)
+	 */
+	public function handle_preview_mode_cookie()
+	{
+		if (isset($_GET['ez_js_preview'])) {
+			if ($_GET['ez_js_preview'] == '1') {
+				// Enable preview mode - set cookie to expire in 1 hour
+				setcookie('ez_js_preview', '1', time() + 3600, '/');
+			} elseif ($_GET['ez_js_preview'] == '0') {
+				// Disable preview mode - clear cookie
+				setcookie('ez_js_preview', '', time() - 3600, '/');
+			}
+		}
+	}
+
+	/**
 	 * Register JavaScript integration hooks
 	 */
 	private function register_js_integration_hooks()
 	{
 		$js_options = get_option('ezoic_js_integration_options');
+		$is_preview_mode = $this->is_js_preview_mode();
 
-		// Add head scripts if auto-insert is enabled
-		if (isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) {
+		// Use default options if in preview mode
+		if ($is_preview_mode) {
+			$js_options = array(
+				'js_auto_insert_scripts' => 1,
+				'js_enable_privacy_scripts' => 1,
+				'js_use_wp_placeholders' => 1
+			);
+		}
+
+		// Add head scripts if auto-insert is enabled or in preview mode
+		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_head', $this, 'inject_ezoic_js_scripts', 10);
 		}
 
-		// Add privacy scripts if enabled (must load before main scripts)
-		if (isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) {
+		// Add privacy scripts if enabled or in preview mode (must load before main scripts)
+		if ((isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_head', $this, 'inject_privacy_scripts', 5);
 		}
 
 		// Add fallback showAds() call in footer if no placeholders were inserted
-		if (isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) {
+		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_footer', $this, 'inject_fallback_showads', 15);
 		}
 	}
@@ -335,6 +377,11 @@ class Ezoic_Integration_Public
 	 */
 	public function inject_ezoic_js_scripts()
 	{
+		$is_preview = $this->is_js_preview_mode();
+		if ($is_preview) {
+			echo '<!-- Ezoic JS Preview Mode Active -->' . "\n";
+		}
+
 		// Main Ezoic script
 		echo '<script id="ezoic-wp-plugin-js" async src="' . EZOIC_SA_SCRIPT_URL . '"></script>' . "\n";
 
