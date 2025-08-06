@@ -155,61 +155,6 @@ class Ezoic_JS_Integration_Settings
 		echo $html;
 	}
 
-	/**
-	 * Handle enabling JavaScript integration
-	 */
-	public function handle_enable_js_integration()
-	{
-		if (isset($_POST['action']) && $_POST['action'] === 'enable_js_integration') {
-			if (!wp_verify_nonce($_POST['js_integration_nonce'], 'enable_js_integration_nonce')) {
-				wp_die('Security check failed');
-			}
-
-			// Enable JavaScript integration
-			update_option('ezoic_js_integration_enabled', true);
-
-			// Set disable_wp_integration to true when enabling JS integration
-			$integration_options = get_option('ezoic_integration_options', array());
-			$integration_options['disable_wp_integration'] = true;
-			update_option('ezoic_integration_options', $integration_options);
-
-			// Disable Placement Service Integration when enabling JS integration
-			// Use the proper AdTester class to load and save the configuration
-			$adtester = new Ezoic_AdTester();
-			if ($adtester->config && isset($adtester->config->enable_adpos_integration)) {
-				// Disable Placement Service Integration
-				$adtester->config->enable_adpos_integration = false;
-				// Save the updated config using the proper method
-				$adtester->update_config();
-			}
-
-			// Trigger integration recheck by clearing the check time
-			$options = get_option('ezoic_integration_status');
-			$options['check_time'] = '';
-			update_option('ezoic_integration_status', $options);
-
-			// Set default options if they don't exist
-			if (false === get_option('ezoic_js_integration_options')) {
-				update_option('ezoic_js_integration_options', $this->default_js_integration_options());
-			}
-
-			// Force generate WP placeholders for JavaScript integration to ensure they're available in Ezoic backend
-			$this->force_generate_wp_placeholders_for_js_integration();
-
-			// Always auto-enable ads.txt detection when JS integration is enabled
-			update_option('ezoic_adstxtmanager_auto_detect', 'on');
-
-			// Auto-detect and setup ads.txt redirect if ATM ID is available
-			$this->auto_setup_adstxt_redirect_for_js_integration();
-
-			// Determine redirect tab
-			$redirect_tab = isset($_POST['from_integration_tab']) ? 'js_integration' : 'js_integration';
-
-			// Redirect to Integration tab
-			wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=' . $redirect_tab));
-			exit;
-		}
-	}
 
 	/**
 	 * Handle disabling JavaScript integration
@@ -260,7 +205,12 @@ class Ezoic_JS_Integration_Settings
 
 		// If WP placeholders were just enabled and JS integration is active, force generate placeholders
 		if ($wp_placeholders_just_enabled && get_option('ezoic_js_integration_enabled', false)) {
-			$this->force_generate_wp_placeholders_for_js_integration();
+			try {
+				$adtester = new Ezoic_AdTester();
+				$adtester->force_generate_placeholders();
+			} catch (\Exception $e) {
+				Ezoic_Integration_Logger::log_exception($e, 'JS Integration Settings');
+			}
 		}
 
 		// Trigger integration recheck if any settings changed
@@ -392,23 +342,6 @@ class Ezoic_JS_Integration_Settings
 		}
 	}
 
-	/**
-	 * Force generate WP placeholders when JavaScript integration is enabled
-	 * This ensures that WP placeholders are available in the Ezoic backend for JS integration to use
-	 */
-	private function force_generate_wp_placeholders_for_js_integration()
-	{
-		try {
-			// Use the existing AdTester force generation functionality
-			$adtester = new Ezoic_AdTester();
-			$adtester->force_generate_placeholders();
-
-			return true;
-		} catch (\Exception $e) {
-			Ezoic_Integration_Logger::log_exception($e, 'JS Integration');
-			return false;
-		}
-	}
 
 	/**
 	 * Auto-detect and setup ads.txt redirect when JavaScript integration is enabled

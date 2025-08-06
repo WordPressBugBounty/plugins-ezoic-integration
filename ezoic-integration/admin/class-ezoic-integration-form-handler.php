@@ -15,21 +15,21 @@ class Ezoic_Integration_Form_Handler
 {
 	/**
 	 * JS Integration settings instance
-	 * 
+	 *
 	 * @var Ezoic_JS_Integration_Settings
 	 */
 	private $js_integration_settings;
 
 	/**
 	 * Cache instance for handling clear cache operations
-	 * 
+	 *
 	 * @var Ezoic_Integration_Cache
 	 */
 	private $cache;
 
 	/**
 	 * Settings helpers instance
-	 * 
+	 *
 	 * @var Ezoic_Settings_Helpers
 	 */
 	private $helpers;
@@ -96,6 +96,14 @@ class Ezoic_Integration_Form_Handler
 
 			// Always auto-enable ads.txt detection when JS integration is enabled
 			update_option('ezoic_adstxtmanager_auto_detect', 'on');
+
+			// Force generate WP placeholders for JavaScript integration to ensure they're available in Ezoic backend
+			try {
+				$adtester = new Ezoic_AdTester();
+				$adtester->force_generate_placeholders();
+			} catch (\Exception $e) {
+				Ezoic_Integration_Logger::log_exception($e, 'JS Integration Form Handler');
+			}
 
 			// Trigger ads.txt detection and setup immediately
 			$detection_result = Ezoic_AdsTxtManager::ezoic_detect_adstxtmanager_id();
@@ -164,7 +172,7 @@ class Ezoic_Integration_Form_Handler
 
 	/**
 	 * Handle updates to ezoic integration options
-	 * 
+	 *
 	 * @param array $old_value Old options value
 	 * @param array $new_value New options value
 	 */
@@ -232,7 +240,7 @@ class Ezoic_Integration_Form_Handler
 
 	/**
 	 * Handle caching update errors
-	 * 
+	 *
 	 * @param array $options Options array
 	 * @param string $message Error message
 	 */
@@ -246,7 +254,7 @@ class Ezoic_Integration_Form_Handler
 
 	/**
 	 * Handle cloud integrated sites with caching enabled
-	 * 
+	 *
 	 * @param object $plugin_admin Plugin admin instance
 	 */
 	public function handle_cloud_integrated_with_caching($plugin_admin)
@@ -268,7 +276,7 @@ class Ezoic_Integration_Form_Handler
 
 	/**
 	 * Sanitize advanced options
-	 * 
+	 *
 	 * @param array $settings Settings to sanitize
 	 * @return array Sanitized settings
 	 */
@@ -294,7 +302,7 @@ class Ezoic_Integration_Form_Handler
 
 	/**
 	 * Sanitize JavaScript integration options (delegated)
-	 * 
+	 *
 	 * @param array $settings Settings to sanitize
 	 * @return array Sanitized settings
 	 */
