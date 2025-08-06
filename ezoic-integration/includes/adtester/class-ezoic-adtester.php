@@ -892,6 +892,16 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 	private function should_skip_insertion()
 	{
+		// Skip insertion if JS integration is enabled but WP placeholders are disabled
+		$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
+		if ($js_integration_enabled) {
+			$js_options = get_option('ezoic_js_integration_options', array());
+			$use_wp_placeholders = isset($js_options['js_use_wp_placeholders']) && $js_options['js_use_wp_placeholders'];
+			if (!$use_wp_placeholders) {
+				return true; // Skip WordPress ad insertion when JS integration is enabled but WP placeholders are disabled
+			}
+		}
+
 		return !$this->do_insert
 			|| !isset($this->config->placeholders)
 			|| !is_array($this->config->placeholders)

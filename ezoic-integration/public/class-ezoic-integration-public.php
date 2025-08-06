@@ -5,18 +5,11 @@ namespace Ezoic_Namespace;
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       https://ezoic.com
- * @since      1.0.0
- *
- * @package    Ezoic_Integration
- * @subpackage Ezoic_Integration/public
- */
-
-/**
- * The public-facing functionality of the plugin.
- *
  * Defines the plugin name, version, and two examples hooks for how to
  * enqueue the public-facing stylesheet and JavaScript.
+ *
+ * @link       https://ezoic.com
+ * @since      1.0.0
  *
  * @package    Ezoic_Integration
  * @subpackage Ezoic_Integration/public

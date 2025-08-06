@@ -2,87 +2,119 @@
 
 namespace Ezoic_Namespace;
 
-
 /**
  * Class Ezoic_AdsTxtManager_Htaccess_Modifier
  * @package Ezoic_Namespace
  */
-class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution {
+class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
+{
 
-	public function SetupSolution() {
+	public function SetupSolution()
+	{
 		$this->GenerateHTACCESSFile();
 
-		// setup file modifier as backup
 		$fileModifier = new Ezoic_AdsTxtManager_File_Modifier();
 		$fileModifier->SetupSolution();
 
-		$redirect_status = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
-		$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
-		$adstxtmanager_status['status'] = $redirect_status;
-		update_option( 'ezoic_adstxtmanager_status', $adstxtmanager_status );
+		$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+		update_option('ezoic_adstxtmanager_status', $redirect_result);
 	}
 
-	public function TearDownSolution() {
+	public function TearDownSolution()
+	{
 		$this->RemoveHTACCESSFile();
 
 		$fileModifier = new Ezoic_AdsTxtManager_File_Modifier();
 		$fileModifier->TearDownSolution();
 
-		if ( get_option( 'ezoic_adstxtmanager_status' ) !== false ) {
-			delete_option( 'ezoic_adstxtmanager_status' );
+		if (get_option('ezoic_adstxtmanager_status') !== false) {
+			delete_option('ezoic_adstxtmanager_status');
 		}
 	}
 
-	private function determineHTACCESSRootPath() {
-		return get_home_path();
+	private function determineHTACCESSRootPath()
+	{
+		return Ezoic_Integration_Path_Sanitizer::get_home_path();
 	}
 
-	public function GenerateHTACCESSFile() {
+	public function GenerateHTACCESSFile()
+	{
 		global $wp, $wp_filesystem;
 		$message = '';
-
-		// get path to cache folder and insert out htaccess file or modify current htaccess file
-		$filePath = $this->determineHTACCESSRootPath() . ".htaccess";
-		if(empty($filePath) || !file_exists($filePath) || !is_readable($filePath) || !is_writable($filePath)) {
-			$message = "Unable to write to the .htaccess file";
+		$rootPath = $this->determineHTACCESSRootPath();
+		
+		if ($rootPath === false) {
+			$message = "Cannot determine website root path for .htaccess file.";
+			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
+			$adstxtmanager_status['message'] = $message;
+			update_option('ezoic_adstxtmanager_status', $adstxtmanager_status);
+			return;
+		}
+		
+		$filePath = $rootPath . ".htaccess";
+		if (empty($filePath) || !$wp_filesystem->exists($filePath) || !$wp_filesystem->is_readable($filePath) || !$wp_filesystem->is_writable($filePath)) {
+			$message = "Cannot access your .htaccess file. Please check that the file exists and has proper write permissions.";
 			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
 			$adstxtmanager_status['message'] = $message;
 			update_option('ezoic_adstxtmanager_status', $adstxtmanager_status);
 			return;
 		}
 
-		// make sure we start clean
 		self::RemoveHTACCESSFile();
 
 		$adstxtmanager_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
 
-		// clear htaccess modifications if ATM ID isn't set
-		if( empty($adstxtmanager_id) || !is_int($adstxtmanager_id) ) {
+		if (empty($adstxtmanager_id) || !is_int($adstxtmanager_id) || $adstxtmanager_id <= 0) {
 			return;
 		}
 
-		$domain = home_url( $wp->request );
-		$domain = parse_url( $domain );
-		$domain = $domain['host'];
-		$domain = preg_replace( '#^(http(s)?://)?w{3}\.#', '$1', $domain );
+		// Sanitize domain extraction
+		$domain = home_url($wp->request);
+		$parsed_url = parse_url($domain);
+		if (!$parsed_url || !isset($parsed_url['host'])) {
+			$message = "Cannot determine domain for ads.txt redirect.";
+			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
+			$adstxtmanager_status['message'] = $message;
+			update_option('ezoic_adstxtmanager_status', $adstxtmanager_status);
+			return;
+		}
+		$domain = Ezoic_Integration_Path_Sanitizer::sanitize_domain($parsed_url['host']);
+		if ($domain === false) {
+			$message = "Invalid domain for ads.txt redirect.";
+			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
+			$adstxtmanager_status['message'] = $message;
+			update_option('ezoic_adstxtmanager_status', $adstxtmanager_status);
+			return;
+		}
 
 		$content = $wp_filesystem->get_contents($filePath);
 
-		$atmContent = array("#BEGIN_ADSTXTMANAGER_HTACCESS_HANDLER",
+		// Create safe redirect URL
+		$redirect_url = Ezoic_Integration_Path_Sanitizer::create_adstxt_redirect_url($adstxtmanager_id, $domain);
+		if ($redirect_url === false) {
+			$message = "Cannot create valid ads.txt redirect URL.";
+			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
+			$adstxtmanager_status['message'] = $message;
+			update_option('ezoic_adstxtmanager_status', $adstxtmanager_status);
+			return;
+		}
+		
+		$atmContent = array(
+			"#BEGIN_ADSTXTMANAGER_HTACCESS_HANDLER",
 			'<IfModule mod_rewrite.c>',
-			'Redirect 301 /ads.txt ' . 'https://srv.adstxtmanager.com/'. $adstxtmanager_id . '/' . $domain,
+			'Redirect 301 /ads.txt ' . $redirect_url,
 			'</IfModule>',
-			"#END_ADSTXTMANAGER_HTACCESS_HANDLER");
+			"#END_ADSTXTMANAGER_HTACCESS_HANDLER"
+		);
 
 		$atmFinalContent = implode("\n", $atmContent);
-		$modifiedContent = $atmFinalContent . "\n" .$content;
+		$modifiedContent = $atmFinalContent . "\n" . $content;
 
 		$success = $wp_filesystem->put_contents($filePath, $modifiedContent);
 		@clearstatcache();
-		//$success = file_put_contents($filePath, $modifiedContent);
 
 		if (!$success) {
-			$message = "We failed to modify your HTACCESS file.";
+			$message = "Unable to update your .htaccess file for ads.txt redirect. Please check file permissions or contact your hosting provider.";
 		}
 
 		if (!empty($message)) {
@@ -92,42 +124,46 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution {
 		}
 	}
 
-	public function RemoveHTACCESSFile() {
-		//Get path to cache folder and din htaccess file,
-		//see if we are the only code in the file and then remove it
-		$filePath = $this->determineHTACCESSRootPath() . ".htaccess";
+	public function RemoveHTACCESSFile()
+	{
+		global $wp_filesystem;
+		$rootPath = $this->determineHTACCESSRootPath();
+		
+		if ($rootPath === false) {
+			return;
+		}
+		
+		$filePath = $rootPath . ".htaccess";
 
-		if(empty($filePath) || !file_exists($filePath) || !is_writable($filePath)) {
+		if (empty($filePath) || !$wp_filesystem->exists($filePath) || !$wp_filesystem->is_writable($filePath)) {
 			return;
 		}
 
-		$content = file_get_contents($filePath);
+		$content = $wp_filesystem->get_contents($filePath);
+		if ($content === false) {
+			return;
+		}
+
 		$lineContent = preg_split("/\r\n|\n|\r/", $content);
-		//Find all text between #ADSTXTMANAGER_INTEGRATION_MODIFICATION
 		$beginAtmContent = 0;
 		$endAtmContent = 0;
-		foreach( $lineContent as $key => $value ) {
-			if( $value == "#BEGIN_ADSTXTMANAGER_HTACCESS_HANDLER" ) {
+		foreach ($lineContent as $key => $value) {
+			if ($value == "#BEGIN_ADSTXTMANAGER_HTACCESS_HANDLER") {
 				$beginAtmContent = $key;
-			} elseif ( $value == "#END_ADSTXTMANAGER_HTACCESS_HANDLER") {
+			} elseif ($value == "#END_ADSTXTMANAGER_HTACCESS_HANDLER") {
 				$endAtmContent = $key;
 			}
 		}
 
-		if( $endAtmContent == 0 ) {
-			//Don't do anything if we couldn't find an end to our code
+		if ($endAtmContent == 0) {
 			return;
 		}
 
-		for( $i = $beginAtmContent; $i <= $endAtmContent; $i++ ) {
+		for ($i = $beginAtmContent; $i <= $endAtmContent; $i++) {
 			unset($lineContent[$i]);
 		}
 
 		$modifiedContent = implode("\n", $lineContent);
-		//Dump out to htaccess file
-		file_put_contents($filePath, $modifiedContent);
+		$wp_filesystem->put_contents($filePath, $modifiedContent);
 	}
-
-
-
 }

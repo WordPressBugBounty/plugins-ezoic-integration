@@ -76,15 +76,6 @@ class Ezoic_AdsTxtManager_Settings
 			'ezoic_adstxtmanager_settings_section'
 		);
 
-		if (get_option('ezoic_adstxtmanager_status') == false) {
-			update_option('ezoic_adstxtmanager_status', array('status' => false, 'message' => ''));
-		}
-
-		register_setting(
-			'ezoic_adstxtmanager',
-			'ezoic_adstxtmanager_status',
-			array('type' => 'array', 'default' => array('status' => false, 'message' => ''))
-		);
 
 		register_setting(
 			'ezoic_adstxtmanager',
@@ -95,7 +86,17 @@ class Ezoic_AdsTxtManager_Settings
 		register_setting(
 			'ezoic_adstxtmanager',
 			'ezoic_adstxtmanager_auto_detect',
-			array('default' => true)
+			array('default' => true, 'sanitize_callback' => array($this, 'sanitize_auto_detect_setting'))
+		);
+
+		if (get_option('ezoic_adstxtmanager_status') === false) {
+			update_option('ezoic_adstxtmanager_status', array('status' => false, 'message' => ''));
+		}
+
+		register_setting(
+			'ezoic_adstxtmanager',
+			'ezoic_adstxtmanager_status',
+			array('type' => 'array', 'default' => array('status' => false, 'message' => ''), 'sanitize_callback' => array($this, 'sanitize_status_array'))
 		);
 	}
 
@@ -107,20 +108,15 @@ class Ezoic_AdsTxtManager_Settings
 	 */
 	function ezoic_adstxtmanager_settings_section_callback()
 	{
+		// Run auto-detection if enabled
+		if (Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect()) {
+			Ezoic_AdsTxtManager::ezoic_detect_adstxtmanager_id();
+		}
 ?>
-		<?php if (! get_option('permalink_structure')) : ?>
+		<?php if (Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true) == 0 && !Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect()) : ?>
 			<div class="notice notice-error adstxtmanager_activate">
 				<p class="adstxtmanager_description">
-					<?php _e('Ezoic\'s Ads.txt redirection does not work with the WordPress \'Plain\' permalink structure. Please change to a different <a href="' . get_admin_url(
-						null,
-						'options-permalink.php'
-					) . '">permalink URL structure</a> (such as \'Post name\').', 'ezoic'); ?>
-				</p>
-			</div>
-		<?php elseif (Ezoic_AdsTxtManager::ezoic_adstxtmanager_id() == 0) : ?>
-			<div class="notice notice-error adstxtmanager_activate">
-				<p class="adstxtmanager_description">
-					<?php printf(__('Ezoic\'s Ads.txt redirection is not set up. Please enter your <a href="%s" target="_blank">Ads.txt Manager</a> ID or enable automatic detection.', 'ezoic'), EZOIC_ADSTXT_MANAGER__SITE); ?>
+					<?php _e('Ezoic\'s Ads.txt redirection is not set up. Please enable Automatic Detection or enter your Ads.txt Manager ID.', 'ezoic'); ?>
 				</p>
 			</div>
 		<?php endif; ?>
@@ -140,23 +136,15 @@ class Ezoic_AdsTxtManager_Settings
 		$adstxtmanager_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
 		$auto_detect = Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect();
 	?>
-		<input type="text" name="ezoic_adstxtmanager_id" class="regular-text code"
-			value="<?php echo $adstxtmanager_id; ?>"
-			<?php echo $auto_detect ? 'disabled' : ''; ?> />
 		<?php if ($auto_detect): ?>
-			<p class="description">
-				<span class="dashicons dashicons-info" style="color: #0073aa;"></span>
-				The Ads.txt Manager ID is automatically set when auto-detect is enabled.<br />
-				To change it, please log into your <a href="https://pubdash.ezoic.com/ezoicads/adtransparency" target="_blank">Publisher Dashboard</a>.
-			</p>
-		<?php elseif ($adstxtmanager_id === 19390): ?>
-			<p class="description">
-				<span class="dashicons dashicons-yes" style="color: #46b450;"></span>
-				You are using Ezoic's automatic ads.txt setup.
-			</p>
+			<!-- Hidden field to preserve ID value when auto-detect is enabled -->
+			<input type="hidden" name="ezoic_adstxtmanager_id" value="<?php echo $adstxtmanager_id; ?>" />
+			<p class="description"><strong><?php echo $adstxtmanager_id; ?></strong></p>
 		<?php else: ?>
+			<input type="text" name="ezoic_adstxtmanager_id" class="regular-text code"
+				value="<?php echo $adstxtmanager_id; ?>" />
 			<p class="description">
-				You can find your <a href="https://svc.adstxtmanager.com/settings" target="_blank">Ads.txt Manager ID here</a>.
+				Manually enter your Ads.txt Manager ID.
 			</p>
 		<?php endif; ?>
 	<?php
@@ -173,7 +161,7 @@ class Ezoic_AdsTxtManager_Settings
 			}
 			?> />
 		<label for="ezoic_adstxtmanager_auto_detect_on">Enabled</label>
-
+		&nbsp;&nbsp;&nbsp;&nbsp;
 		<input type="radio" id="ezoic_adstxtmanager_auto_detect_off" name="ezoic_adstxtmanager_auto_detect" value="off"
 			<?php
 			if (! $value) {
@@ -193,7 +181,49 @@ class Ezoic_AdsTxtManager_Settings
 		if (isset($input)) {
 			$new_input = absint($input);
 		}
+
+		// Refresh ads.txt status when settings are saved
+		if ($new_input > 0) {
+			$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+
+			// If redirect is failing, attempt to run setup to fix it - but only if it's not an invalid ATM ID error
+			if (!$redirect_result['status'] && (!isset($redirect_result['error']) || $redirect_result['error'] !== 'invalid_atm_id')) {
+				$solutionFactory = new Ezoic_AdsTxtManager_Solution_Factory();
+				$adsTxtSolution = $solutionFactory->GetBestSolution();
+				$adsTxtSolution->SetupSolution();
+
+				// Check redirect status again after setup attempt to get the final result
+				$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+			}
+
+			update_option('ezoic_adstxtmanager_status', $redirect_result);
+		}
+
 		return $new_input;
+	}
+
+	public function sanitize_auto_detect_setting($input)
+	{
+		// Get current ATM ID to check if we should refresh status
+		$atm_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
+
+		// Refresh status on any auto-detect setting change with valid ATM ID
+		if ($atm_id > 0) {
+			$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+			// Update cached status with full result array
+			update_option('ezoic_adstxtmanager_status', $redirect_result);
+		}
+
+		return $input;
+	}
+
+	public function sanitize_status_array($input)
+	{
+		// Ensure the status is always an array structure
+		if (!is_array($input)) {
+			return array('status' => false, 'message' => '');
+		}
+		return $input;
 	}
 }
 

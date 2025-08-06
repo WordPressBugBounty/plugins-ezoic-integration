@@ -25,7 +25,7 @@
 		// Check if JavaScript integration is enabled
 		$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
 		if (!$js_integration_enabled) : ?>
-			<div class="notice notice-warning">
+			<div class="notice notice-info">
 				<p><strong>No Integration Detected</strong></p>
 				<p>We couldn't detect an active Ezoic integration. You can enable JavaScript integration in the Integration tab or explore other integration options.</p>
 			</div>

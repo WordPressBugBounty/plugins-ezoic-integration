@@ -81,7 +81,7 @@ class Ezoic_JS_Integration_Settings
 	/**
 	 * Default JavaScript integration options
 	 */
-	private function default_js_integration_options()
+	public function default_js_integration_options()
 	{
 		return array(
 			'js_auto_insert_scripts' => 1,
@@ -164,6 +164,7 @@ class Ezoic_JS_Integration_Settings
 			if (!wp_verify_nonce($_POST['js_integration_nonce'], 'enable_js_integration_nonce')) {
 				wp_die('Security check failed');
 			}
+
 			// Enable JavaScript integration
 			update_option('ezoic_js_integration_enabled', true);
 
@@ -194,6 +195,12 @@ class Ezoic_JS_Integration_Settings
 
 			// Force generate WP placeholders for JavaScript integration to ensure they're available in Ezoic backend
 			$this->force_generate_wp_placeholders_for_js_integration();
+
+			// Always auto-enable ads.txt detection when JS integration is enabled
+			update_option('ezoic_adstxtmanager_auto_detect', 'on');
+
+			// Auto-detect and setup ads.txt redirect if ATM ID is available
+			$this->auto_setup_adstxt_redirect_for_js_integration();
 
 			// Determine redirect tab
 			$redirect_tab = isset($_POST['from_integration_tab']) ? 'js_integration' : 'js_integration';
@@ -314,7 +321,7 @@ class Ezoic_JS_Integration_Settings
 			echo '<h4 style="margin-top: 0; color: #0073aa;"><span class="dashicons dashicons-info" style="vertical-align: middle; margin-right: 5px;"></span>' . __('Recommendation: Switch to JavaScript Integration', 'ezoic') . '</h4>';
 			echo '<p>' . __('Your site is currently using WordPress Integration. We recommend switching to JavaScript Integration for better performance and more advanced features.', 'ezoic') . '</p>';
 			echo '<p><strong>' . __('Benefits of Ezoic JavaScript Integration:', 'ezoic') . '</strong></p>';
-			echo '<ul style="margin-left: 20px;">';
+			echo '<ul style="margin-left: 20px; list-style: disc;">';
 			echo '<li>' . __('Quick, simple setup', 'ezoic') . '</li>';
 			echo '<li>' . __('No changes to DNS required', 'ezoic') . '</li>';
 			echo '<li>' . __('Complete control &amp; customization', 'ezoic') . '</li>';
@@ -340,12 +347,12 @@ class Ezoic_JS_Integration_Settings
 
 			// Just show the turn on button directly, don't call do_settings_sections
 			echo '<h3>' . __('JavaScript Integration Settings', 'ezoic') . '</h3>';
-			echo '<p>' . __('JavaScript integration is currently disabled. Enable it to configure advanced settings for your Ezoic ads.', 'ezoic') . '</p>';
+			echo '<p>' . __('JavaScript integration is currently disabled. Enable it to configure advanced settings for your Ezoic ads.', 'ezoic') . '</p><hr/><br/>';
 			echo '<form method="post" action="" style="margin-top: 20px;">';
 			echo wp_nonce_field('enable_js_integration_nonce', 'js_integration_nonce', true, false);
 			echo '<input type="hidden" name="action" value="enable_js_integration"/>';
 			echo '<input type="hidden" name="from_integration_tab" value="1"/>';
-			echo '<input type="submit" class="button button-primary" value="Turn On JavaScript Integration" style="background: #0073aa; color: white; border-color: #005a87;"/>';
+			echo '<input type="submit" class="button button-primary" value="Enable JavaScript Integration" style="background: #0073aa; color: white; border-color: #005a87;"/>';
 			echo '</form>';
 		}
 	}
@@ -398,7 +405,51 @@ class Ezoic_JS_Integration_Settings
 
 			return true;
 		} catch (\Exception $e) {
-			Ezoic_AdTester::log('JS Integration: Failed to force generate WP placeholders: ' . $e->getMessage());
+			Ezoic_Integration_Logger::log_exception($e, 'JS Integration');
+			return false;
+		}
+	}
+
+	/**
+	 * Auto-detect and setup ads.txt redirect when JavaScript integration is enabled
+	 * This ensures that ads.txt redirect is automatically configured if an ATM ID is available
+	 */
+	private function auto_setup_adstxt_redirect_for_js_integration()
+	{
+		try {
+			// Check if ads.txt manager auto-detect is enabled
+			if (!Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect()) {
+				return false;
+			}
+
+			// Check if ATM ID is already set
+			$existing_atm_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
+			if (!empty($existing_atm_id) && $existing_atm_id > 0) {
+				// ATM ID already exists, ensure the solution is set up
+				$solutionFactory = new Ezoic_AdsTxtManager_Solution_Factory();
+				$adsTxtSolution = $solutionFactory->GetBestSolution();
+				$adsTxtSolution->SetupSolution();
+				return true;
+			}
+
+			// Try to auto-detect ATM ID from backend
+			$atm_detection_result = Ezoic_AdsTxtManager::ezoic_detect_adstxtmanager_id();
+
+			if (is_array($atm_detection_result) && isset($atm_detection_result['success']) && $atm_detection_result['success']) {
+				// ATM ID was successfully detected and saved, now set up the solution
+				$solutionFactory = new Ezoic_AdsTxtManager_Solution_Factory();
+				$adsTxtSolution = $solutionFactory->GetBestSolution();
+				$adsTxtSolution->SetupSolution();
+
+				// Clear any existing status to allow for fresh verification
+				delete_option('ezoic_adstxtmanager_status');
+
+				return true;
+			}
+
+			return false;
+		} catch (\Exception $e) {
+			Ezoic_Integration_Logger::log_exception($e, 'JS Integration');
 			return false;
 		}
 	}
