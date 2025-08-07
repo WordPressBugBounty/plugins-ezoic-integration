@@ -69,7 +69,7 @@ class Ezoic_AdTester_Config
 		$this->skip_word_count					= 10;
 		$this->user_roles_with_ads_disabled 	= array();
 		$this->exclude_pages					= array();
-		$this->last_updated						= 0;
+		$this->last_updated						= time();
 		$this->enable_adpos_integration			= false;
 		$this->enable_placement_id_selection	= false;
 		$this->active_placements				= array();

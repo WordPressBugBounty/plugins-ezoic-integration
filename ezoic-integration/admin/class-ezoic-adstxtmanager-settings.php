@@ -192,8 +192,23 @@ class Ezoic_AdsTxtManager_Settings
 				$adsTxtSolution = $solutionFactory->GetBestSolution();
 				$adsTxtSolution->SetupSolution();
 
-				// Check redirect status again after setup attempt to get the final result
-				$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+				// Get the detailed setup result that may contain specific error messages
+				$setup_result = get_option('ezoic_adstxtmanager_status');
+
+				// Always recheck redirect status after setup attempt
+				$recheck_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+
+				// If recheck shows 'redirect_failed' and setup had detailed error messages, preserve the setup errors
+				if (
+					!$recheck_result['status'] && isset($recheck_result['error']) && $recheck_result['error'] === 'redirect_failed'
+					&& isset($setup_result['status']) && !$setup_result['status'] && !empty($setup_result['message'])
+				) {
+					// Keep the detailed setup error message instead of the generic redirect failure message
+					$redirect_result = $setup_result;
+				} else {
+					// Use the recheck result (success, invalid_atm_id, or no detailed setup errors available)
+					$redirect_result = $recheck_result;
+				}
 			}
 
 			update_option('ezoic_adstxtmanager_status', $redirect_result);

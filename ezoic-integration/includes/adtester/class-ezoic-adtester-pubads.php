@@ -44,6 +44,14 @@ class Ezoic_AdTester_PublisherAd
 	}
 
 	/**
+	 * Get the isActive status of this placeholder
+	 */
+	public function is_active()
+	{
+		return $this->isActive;
+	}
+
+	/**
 	 * Decode publisher ads from an array
 	 *
 	 * @access private

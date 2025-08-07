@@ -196,8 +196,81 @@ class Ezoic_AdTester extends Ezoic_Feature
 		// Initialize active placements with wp_* defaults if not already set
 		$this->config->initialize_active_placements();
 
+		// Fix any invalid active placement IDs using the fresh API data
+		$corrections = $this->fix_active_placements_with_api_data($publisher_ads);
+		if (!empty($corrections)) {
+			foreach ($corrections as $correction) {
+				if ($correction['action'] === 'corrected') {
+					self::log("Fixed active placement for '{$correction['position_type']}': changed position ID from {$correction['old_position_id']} to {$correction['new_position_id']} (using placeholder '{$correction['new_placeholder_name']}')");
+				} elseif ($correction['action'] === 'removed') {
+					self::log("Removed invalid active placement for '{$correction['position_type']}': position ID {$correction['old_position_id']} ({$correction['reason']})");
+				}
+			}
+		}
+
 		// Store config
 		$this->update_config();
+	}
+
+	/**
+	 * Fix active placements using fresh API data
+	 */
+	private function fix_active_placements_with_api_data($publisher_ads)
+	{
+		$corrections = array();
+		$valid_position_ids = array();
+		$position_type_to_ad = array();
+
+		// Build lookup tables for valid placeholders using API data
+		foreach ($publisher_ads->ads as $ad) {
+			if ($ad->is_active() == 1) { // Only consider active placeholders
+				$valid_position_ids[] = $ad->adPositionId;
+
+				// For each position type, prefer wp_ placeholders as replacements
+				$position_type = $ad->positionType;
+				if (
+					!isset($position_type_to_ad[$position_type]) ||
+					strpos($ad->name, 'wp_') === 0
+				) {
+					$position_type_to_ad[$position_type] = $ad;
+				}
+			}
+		}
+
+		// Check and fix each active placement
+		foreach ($this->config->active_placements as $position_type => $position_id) {
+			$position_id = intval($position_id);
+
+			// Check if the position ID exists and is active
+			if (!in_array($position_id, $valid_position_ids)) {
+				// Invalid placement found - try to fix it
+				if (isset($position_type_to_ad[$position_type])) {
+					// Replace with a valid placeholder for this position type
+					$replacement_ad = $position_type_to_ad[$position_type];
+					$this->config->active_placements[$position_type] = $replacement_ad->adPositionId;
+
+					$corrections[] = array(
+						'action' => 'corrected',
+						'position_type' => $position_type,
+						'old_position_id' => $position_id,
+						'new_position_id' => $replacement_ad->adPositionId,
+						'new_placeholder_name' => $replacement_ad->name
+					);
+				} else {
+					// No valid placeholder found for this position type - remove it
+					unset($this->config->active_placements[$position_type]);
+
+					$corrections[] = array(
+						'action' => 'removed',
+						'position_type' => $position_type,
+						'old_position_id' => $position_id,
+						'reason' => 'no_valid_placeholder_available'
+					);
+				}
+			}
+		}
+
+		return $corrections;
 	}
 
 	/**
@@ -894,9 +967,17 @@ class Ezoic_AdTester extends Ezoic_Feature
 	{
 		// Skip insertion if JS integration is enabled but WP placeholders are disabled
 		$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
-		if ($js_integration_enabled) {
-			$js_options = get_option('ezoic_js_integration_options', array());
-			$use_wp_placeholders = isset($js_options['js_use_wp_placeholders']) && $js_options['js_use_wp_placeholders'];
+		$is_preview_mode = Ezoic_Integration::is_js_preview_mode();
+
+		if ($js_integration_enabled || $is_preview_mode) {
+			if ($is_preview_mode) {
+				// In preview mode, always use WP placeholders
+				$use_wp_placeholders = true;
+			} else {
+				$js_options = get_option('ezoic_js_integration_options', array());
+				$use_wp_placeholders = isset($js_options['js_use_wp_placeholders']) && $js_options['js_use_wp_placeholders'];
+			}
+
 			if (!$use_wp_placeholders) {
 				return true; // Skip WordPress ad insertion when JS integration is enabled but WP placeholders are disabled
 			}

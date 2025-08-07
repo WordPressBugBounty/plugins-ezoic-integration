@@ -30,7 +30,15 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 		$protected_content = array();
 		$counter = 0;
 
-		// 1. Protect <script> tags (most common case)
+		// 1. Protect conditional comments containing scripts/styles (must be first)
+		$content = preg_replace_callback('/<!--\[if[^\]]*\]>.*?<!\[endif\]-->/is', function ($matches) use (&$protected_content, &$counter) {
+			$placeholder_id = 'EZOIC_CONDITIONAL_' . $counter . '_PLACEHOLDER';
+			$protected_content[$placeholder_id] = $matches[0];
+			$counter++;
+			return '<!--' . $placeholder_id . '-->';
+		}, $content);
+
+		// 2. Protect <script> tags (most common case)
 		$content = preg_replace_callback('/<script\b[^>]*>(.*?)<\/script>/is', function ($matches) use (&$protected_content, &$counter) {
 			$placeholder_id = 'EZOIC_SCRIPT_' . $counter . '_PLACEHOLDER';
 			$protected_content[$placeholder_id] = $matches[0];
@@ -38,7 +46,7 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			return '<!--' . $placeholder_id . '-->';
 		}, $content);
 
-		// 2. Protect <style> tags (can contain content with HTML-like strings)
+		// 3. Protect <style> tags (can contain content with HTML-like strings)
 		$content = preg_replace_callback('/<style\b[^>]*>(.*?)<\/style>/is', function ($matches) use (&$protected_content, &$counter) {
 			$placeholder_id = 'EZOIC_STYLE_' . $counter . '_PLACEHOLDER';
 			$protected_content[$placeholder_id] = $matches[0];
