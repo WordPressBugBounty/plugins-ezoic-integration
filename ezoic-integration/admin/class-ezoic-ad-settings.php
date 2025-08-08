@@ -488,9 +488,9 @@ class Ezoic_Integration_Ad_Settings
 
 		// Disable ads on page
 		if (\strpos($recent_post_url, '?')) {
-			$recent_post_url .= '&ez_orig=1';
+			$recent_post_url .= '&ez_orig=1&ez_js_disable=1';
 		} else {
-			$recent_post_url .= '?ez_orig=1';
+			$recent_post_url .= '?ez_orig=1&ez_js_disable=1';
 		}
 		// Properly format config so the editor can deserialize it
 		$excerptTags = '[]';

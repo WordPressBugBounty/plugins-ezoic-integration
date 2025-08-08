@@ -337,6 +337,11 @@ class Ezoic_Integration_Public
 	 */
 	private function register_js_integration_hooks()
 	{
+		// Do not run JavaScript integration if disabled
+		if (defined('EZOIC__DISABLE_JS') && EZOIC__DISABLE_JS) {
+			return;
+		}
+
 		$js_options = get_option('ezoic_js_integration_options');
 		$is_preview_mode = $this->is_js_preview_mode();
 

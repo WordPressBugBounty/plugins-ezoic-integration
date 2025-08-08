@@ -49,26 +49,40 @@ abstract class Ezoic_AdTester_Inserter
 	protected function get_filtered_placeholder_rules()
 	{
 		$rules = array();
+		$processed_position_types = array(); // Track which position types we've already processed
 
 		foreach ($this->config->placeholder_config as $ph_config) {
-			if ($ph_config->page_type == $this->page_type) {
-				// If Position ID selection is enabled, only include placeholders that are active for their position type
-				if (isset($this->config->enable_placement_id_selection) && $this->config->enable_placement_id_selection === true) {
-					$placeholder = isset($this->config->placeholders[$ph_config->placeholder_id]) ? $this->config->placeholders[$ph_config->placeholder_id] : null;
-					if ($placeholder) {
-						$position_type = $placeholder->position_type;
-						$position_id = $placeholder->position_id;
-						$active_position_id = $this->config->get_active_placement($position_type);
+			if ($ph_config->page_type != $this->page_type) {
+				continue;
+			}
 
-						// Only include this placeholder if it's the active one for this position type
-						if ($active_position_id && $active_position_id == $position_id) {
-							$rules[$ph_config->placeholder_id] = $ph_config;
-						}
-					}
-				} else {
-					// Original logic when Position ID selection is disabled
-					$rules[$ph_config->placeholder_id] = $ph_config;
-				}
+			$placeholder = isset($this->config->placeholders[$ph_config->placeholder_id]) ? $this->config->placeholders[$ph_config->placeholder_id] : null;
+			if (!$placeholder) {
+				continue;
+			}
+
+			$position_type = $placeholder->position_type;
+
+			// Skip if we've already processed this position type (prevents duplicates)
+			if (isset($processed_position_types[$position_type])) {
+				continue;
+			}
+
+			// Check if this placeholder should be included
+			$should_include = false;
+			if (isset($this->config->enable_placement_id_selection) && $this->config->enable_placement_id_selection === true) {
+				// Position ID selection enabled: only include if this is the active placement
+				$position_id = $placeholder->position_id;
+				$active_position_id = $this->config->get_active_placement($position_type);
+				$should_include = ($active_position_id && $active_position_id == $position_id);
+			} else {
+				// Position ID selection disabled: include all valid placeholders
+				$should_include = true;
+			}
+
+			if ($should_include) {
+				$rules[$ph_config->placeholder_id] = $ph_config;
+				$processed_position_types[$position_type] = true;
 			}
 		}
 
