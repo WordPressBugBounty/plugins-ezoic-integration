@@ -83,6 +83,11 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 	{
 		// Validation
 		if (!isset($content) || \ez_strlen($content) === 0) {
+			Ezoic_Integration_Logger::console_debug(
+				"Content insertion skipped - content is empty or null",
+				'Content Ads',
+				'info'
+			);
 			return $content;
 		}
 
@@ -119,7 +124,17 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 					case 'after_paragraph':
 						$content = $this->relative_to_paragraph($placeholder, $rule->display_option, $content, 'after');
 						break;
+
+					default:
+						continue 2;
 				}
+			} else {
+				Ezoic_Integration_Logger::console_debug(
+					"Placement skipped - display is disabled. Placeholder ID: {$rule->placeholder_id}",
+					'Content Ads',
+					'info',
+					$rule->placeholder_id
+				);
 			}
 		}
 
@@ -140,16 +155,29 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		if (ez_strlen($paragraph_number) > 0 && is_numeric($paragraph_number)) {
 			$placement_paragraph = (int) $paragraph_number;
 		} else {
+			Ezoic_Integration_Logger::console_debug(
+				"Position {$placeholder->position_id} failed: Invalid paragraph '{$paragraph_number}' (must be numeric)",
+				'Content Ads',
+				'warn',
+				$placeholder->position_id
+			);
 			return $content;
 		}
 
 		// If the placement display option is out of bounds, return the content
 		if ($placement_paragraph == -1 || $placement_paragraph > \count($this->paragraphs)) {
+			Ezoic_Integration_Logger::console_debug(
+				"Position {$placeholder->position_id} failed: Paragraph {$placement_paragraph} not found (only " . \count($this->paragraphs) . " available)",
+				'Content Ads',
+				'warn',
+				$placeholder->position_id
+			);
 			return $content;
 		}
 
-		// Select paragraph
-		$target_paragraph = $this->paragraphs[$placement_paragraph - 1];
+		// Select paragraph (convert to 0-based index)
+		$paragraph_index = $placement_paragraph - 1;
+		$target_paragraph = $this->paragraphs[$paragraph_index];
 
 		// Determine insertion location
 		$position = -1;
@@ -160,10 +188,30 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		}
 
 		// Insert placeholder
+		$original_content_length = strlen($content);
 		$content = \ez_substr_replace($content, $placeholder_markup, $position + $this->position_offset);
 		$this->position_offset += $placeholder_markup_len;
 
-		if (EZOIC_DEBUG) {
+		// Check if insertion actually happened
+		$new_content_length = strlen($content);
+		if ($new_content_length > $original_content_length) {
+			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+			Ezoic_Integration_Logger::console_debug(
+				"Position {$placeholder->position_id} inserted {$mode} paragraph {$placement_paragraph}",
+				'Content Ads',
+				'info',
+				$placeholder->position_id
+			);
+		} else {
+			Ezoic_Integration_Logger::console_debug(
+				"Position {$placeholder->position_id} failed: Content unchanged (insertion error)",
+				'Content Ads',
+				'warn',
+				$placeholder->position_id
+			);
+		}
+
+		if (defined('EZOIC_DEBUG') && EZOIC_DEBUG) {
 			$debugInfo = "";
 			$debugInfo .= 'Placeholder ID: ' . $placeholder->position_id . PHP_EOL;
 			$debugInfo .= 'Paragraph Insertion Number: ' . $paragraph_number . PHP_EOL;

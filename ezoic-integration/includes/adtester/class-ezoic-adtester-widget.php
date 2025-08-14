@@ -10,7 +10,20 @@ if ( class_exists( 'WP_Widget' ) ) {
 		}
 
 		public function widget( $args, $instance ) {
-			echo $instance['embed_code'];
+			$embed_code = $instance['embed_code'];
+			echo $embed_code;
+			
+			// Track insertion if position ID found
+			if (preg_match('/id="ezoic-pub-ad-placeholder-(\d+)"/', $embed_code, $matches)) {
+				$position_id = $matches[1];
+				Ezoic_Integration_Logger::track_insertion($position_id);
+				Ezoic_Integration_Logger::console_debug(
+					"Position {$position_id} inserted in sidebar widget",
+					'Sidebar Ads',
+					'info',
+					$position_id
+				);
+			}
 		}
 
 		public function form( $instance ) {

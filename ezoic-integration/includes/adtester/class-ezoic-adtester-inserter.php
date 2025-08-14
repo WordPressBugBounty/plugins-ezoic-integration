@@ -11,34 +11,8 @@ abstract class Ezoic_AdTester_Inserter
 	{
 		$this->config = $config;
 
-		// Figure out page type:
-
-		// When the front page of the site is displayed, regardless of whether
-		// it is set to show posts or a static page.
-		if (\is_front_page()) {
-			$this->page_type = 'home';
-		}
-
-		// When a Category archive page is being displayed, or when the main
-		// blog page is being displayed. If your home page has been set to a
-		// Static Page instead, then this will only prove true on the page
-		// which you set as the "Posts page" in Settings > Reading.
-		elseif (\is_category() || \is_home()) {
-			$this->page_type = 'category';
-		}
-
-		// When any single Post (or attachment, or custom Post Type) is being
-		// displayed, or archive pages which include category, tag, author, date,
-		// custom post type, and custom taxonomy based archives is being displayed.
-		elseif (\is_single() || \is_archive()) {
-			$this->page_type = 'post';
-		}
-
-		// When any Page is being displayed. This refers to WordPress Pages,
-		// not any generic webpage from your blog
-		elseif (\is_page()) {
-			$this->page_type = 'page';
-		}
+		// Figure out page type using centralized helper
+		$this->page_type = Ezoic_AdPos::get_current_page_type();
 	}
 
 	/**
@@ -49,7 +23,27 @@ abstract class Ezoic_AdTester_Inserter
 	protected function get_filtered_placeholder_rules()
 	{
 		$rules = array();
-		$processed_position_types = array(); // Track which position types we've already processed
+
+		// Track which position types we've already processed across ALL posts on this page
+		static $global_processed_position_types = array();
+
+		// Only log this once per page load to avoid spam
+		static $logged_page_info = false;
+		if (!$logged_page_info) {
+			$page_type_counts = array();
+			foreach ($this->config->placeholder_config as $config) {
+				$page_type_counts[$config->page_type] = (isset($page_type_counts[$config->page_type]) ? $page_type_counts[$config->page_type] : 0) + 1;
+			}
+
+			$matching_placements = isset($page_type_counts[$this->page_type]) ? $page_type_counts[$this->page_type] : 0;
+
+			Ezoic_Integration_Logger::console_debug(
+				"Ad Tester running - Page Type: {$this->page_type}, Active Placements: {$matching_placements}",
+				'Ad System',
+				'info'
+			);
+			$logged_page_info = true;
+		}
 
 		foreach ($this->config->placeholder_config as $ph_config) {
 			if ($ph_config->page_type != $this->page_type) {
@@ -58,13 +52,17 @@ abstract class Ezoic_AdTester_Inserter
 
 			$placeholder = isset($this->config->placeholders[$ph_config->placeholder_id]) ? $this->config->placeholders[$ph_config->placeholder_id] : null;
 			if (!$placeholder) {
+				Ezoic_Integration_Logger::console_debug(
+					"Placement skipped - placeholder not found. Placeholder ID: {$ph_config->placeholder_id}",
+					'Ad System'
+				);
 				continue;
 			}
 
 			$position_type = $placeholder->position_type;
 
-			// Skip if we've already processed this position type (prevents duplicates)
-			if (isset($processed_position_types[$position_type])) {
+			// Skip if we've already processed this position type globally (prevents duplicates across all posts)
+			if (isset($global_processed_position_types[$position_type])) {
 				continue;
 			}
 
@@ -75,6 +73,13 @@ abstract class Ezoic_AdTester_Inserter
 				$position_id = $placeholder->position_id;
 				$active_position_id = $this->config->get_active_placement($position_type);
 				$should_include = ($active_position_id && $active_position_id == $position_id);
+
+				if (!$should_include) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - not the active placement. Position ID: {$position_id}, Active Position ID: {$active_position_id}, Position Type: {$position_type}",
+						'Ad System'
+					);
+				}
 			} else {
 				// Position ID selection disabled: include all valid placeholders
 				$should_include = true;
@@ -82,7 +87,13 @@ abstract class Ezoic_AdTester_Inserter
 
 			if ($should_include) {
 				$rules[$ph_config->placeholder_id] = $ph_config;
-				$processed_position_types[$position_type] = true;
+				$global_processed_position_types[$position_type] = true;
+				Ezoic_Integration_Logger::console_debug(
+					"Placement {$placeholder->position_id} included for insertion. Position Type: {$position_type}",
+					'Ad System',
+					'info',
+					$placeholder->position_id
+				);
 			}
 		}
 

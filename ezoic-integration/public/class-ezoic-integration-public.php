@@ -342,6 +342,11 @@ class Ezoic_Integration_Public
 			return;
 		}
 
+		// Do not run JavaScript integration in admin contexts
+		if ($this->is_admin_context()) {
+			return;
+		}
+
 		$js_options = get_option('ezoic_js_integration_options');
 		$is_preview_mode = $this->is_js_preview_mode();
 
@@ -375,10 +380,16 @@ class Ezoic_Integration_Public
 	 */
 	public function inject_ezoic_js_scripts()
 	{
+		// Do not inject scripts in admin contexts
+		if ($this->is_admin_context()) {
+			return;
+		}
+
 		$is_preview = $this->is_js_preview_mode();
 		if ($is_preview) {
 			echo '<!-- Ezoic JS Preview Mode Active -->' . "\n";
 		}
+
 
 		// Main Ezoic script
 		echo '<script id="ezoic-wp-plugin-js" async src="' . EZOIC_SA_SCRIPT_URL . '"></script>' . "\n";
@@ -393,6 +404,11 @@ class Ezoic_Integration_Public
 	 */
 	public function inject_privacy_scripts()
 	{
+		// Do not inject scripts in admin contexts
+		if ($this->is_admin_context()) {
+			return;
+		}
+
 		// Privacy/CMP scripts (must load first)
 		echo '<script src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
 		echo '<script src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
@@ -403,6 +419,11 @@ class Ezoic_Integration_Public
 	 */
 	public function inject_fallback_showads()
 	{
+		// Do not inject scripts in admin contexts
+		if ($this->is_admin_context()) {
+			return;
+		}
+
 		// Check if any Ezoic JS placeholders were inserted using the class method
 		if (!Ezoic_AdTester_Placeholder::js_placeholders_inserted()) {
 			// No JS placeholders were inserted, add fallback showAds() call
@@ -584,5 +605,31 @@ class Ezoic_Integration_Public
 	private function modify_navigation($content)
 	{
 		return apply_filters('navigation_markup_template', $content);
+	}
+
+	/**
+	 * Check if we're in an admin context where JS integration should be disabled
+	 */
+	private function is_admin_context()
+	{
+		// Check for admin pages
+		if (is_admin()) {
+			return true;
+		}
+
+		// Check for customizer preview
+		if (is_customize_preview()) {
+			return true;
+		}
+
+		// Check for block editor context (including widget editor)
+		if (function_exists('get_current_screen')) {
+			$screen = get_current_screen();
+			if ($screen && method_exists($screen, 'is_block_editor') && $screen->is_block_editor()) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

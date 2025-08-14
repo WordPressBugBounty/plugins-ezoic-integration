@@ -23,6 +23,16 @@ class Ezoic_Integration_Logger
 	{
 		$prefix = $context ? "[ Ezoic - {$context} ]" : '[ Ezoic ]';
 		error_log($prefix . ' ' . $message);
+
+		if (self::is_debug_enabled()) {
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => 'log',
+				'context' => $context,
+				'message' => $message
+			);
+			self::$debug_logs[] = $log_entry;
+		}
 	}
 
 	/**
@@ -30,10 +40,26 @@ class Ezoic_Integration_Logger
 	 *
 	 * @param string $message The error message to log
 	 * @param string $context Optional context identifier
+	 * @param int|string $position_id Optional position ID for debug table filtering
 	 */
-	public static function log_error($message, $context = '')
+	public static function log_error($message, $context = '', $position_id = null)
 	{
-		self::log('ERROR: ' . $message, $context);
+		$prefix = $context ? "[ Ezoic - {$context} ]" : '[ Ezoic ]';
+		$full_message = $prefix . ' ERROR: ' . $message;
+		error_log($full_message);
+
+		if (self::is_debug_enabled()) {
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => 'error',
+				'context' => $context,
+				'message' => 'ERROR: ' . $message
+			);
+			if ($position_id !== null) {
+				$log_entry['position_id'] = $position_id;
+			}
+			self::$debug_logs[] = $log_entry;
+		}
 	}
 
 	/**
@@ -41,10 +67,26 @@ class Ezoic_Integration_Logger
 	 *
 	 * @param string $message The warning message to log
 	 * @param string $context Optional context identifier
+	 * @param int|string $position_id Optional position ID for debug table filtering
 	 */
-	public static function log_warning($message, $context = '')
+	public static function log_warning($message, $context = '', $position_id = null)
 	{
-		self::log('WARNING: ' . $message, $context);
+		$prefix = $context ? "[ Ezoic - {$context} ]" : '[ Ezoic ]';
+		$full_message = $prefix . ' WARNING: ' . $message;
+		error_log($full_message);
+
+		if (self::is_debug_enabled()) {
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => 'warn',
+				'context' => $context,
+				'message' => 'WARNING: ' . $message
+			);
+			if ($position_id !== null) {
+				$log_entry['position_id'] = $position_id;
+			}
+			self::$debug_logs[] = $log_entry;
+		}
 	}
 
 	/**
@@ -52,11 +94,24 @@ class Ezoic_Integration_Logger
 	 *
 	 * @param string $message The debug message to log
 	 * @param string $context Optional context identifier
+	 * @param int|string $position_id Optional position ID for debug table filtering
 	 */
-	public static function log_debug($message, $context = '')
+	public static function log_debug($message, $context = '', $position_id = null)
 	{
-		if (defined('EZOIC_DEBUG') && EZOIC_DEBUG) {
-			self::log('DEBUG: ' . $message, $context);
+		if (self::is_debug_enabled()) {
+			$prefix = $context ? "[ Ezoic - {$context} ]" : '[ Ezoic ]';
+			$full_message = $prefix . ' DEBUG: ' . $message;
+			error_log($full_message);
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => 'debug',
+				'context' => $context,
+				'message' => 'DEBUG: ' . $message
+			);
+			if ($position_id !== null) {
+				$log_entry['position_id'] = $position_id;
+			}
+			self::$debug_logs[] = $log_entry;
 		}
 	}
 
@@ -75,7 +130,66 @@ class Ezoic_Integration_Logger
 			$exception->getLine(),
 			$exception->getMessage()
 		);
-		self::log($message, $context);
+		$prefix = $context ? "[ Ezoic - {$context} ]" : '[ Ezoic ]';
+		$full_message = $prefix . ' ' . $message;
+		error_log($full_message);
+
+		if (self::is_debug_enabled()) {
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => 'error',
+				'context' => $context,
+				'message' => $message
+			);
+			self::$debug_logs[] = $log_entry;
+		}
+	}
+
+	/**
+	 * Track a successful position insertion for later verification
+	 */
+	public static function track_insertion($position_id)
+	{
+		if (self::is_debug_enabled()) {
+			// Only track unique position IDs to avoid duplicates
+			if (!in_array($position_id, self::$inserted_positions)) {
+				self::$inserted_positions[] = $position_id;
+			}
+		}
+	}
+
+	/**
+	 * Log debug information to ezJsDebug system when EZOIC_DEBUG is enabled
+	 *
+	 * @param string $message The debug message to log
+	 * @param string $context Optional context identifier
+	 * @param string $type Debug type (log, error, warn, debug, info)
+	 * @param int|string $position_id Optional position ID for debug filtering
+	 */
+	public static function console_debug($message, $context = '', $type = 'log', $position_id = null)
+	{
+		if (self::is_debug_enabled()) {
+			$log_entry = array(
+				'timestamp' => microtime(true),
+				'type' => $type,
+				'context' => $context,
+				'message' => $message
+			);
+
+			if ($position_id !== null) {
+				$log_entry['position_id'] = $position_id;
+			}
+
+			self::$debug_logs[] = $log_entry;
+
+			// Ensure output hook is registered
+			if (!has_action('wp_footer', array(__CLASS__, 'render_console_output'))) {
+				add_action('wp_footer', array(__CLASS__, 'render_console_output'));
+			}
+			if (!has_action('admin_footer', array(__CLASS__, 'render_console_output'))) {
+				add_action('admin_footer', array(__CLASS__, 'render_console_output'));
+			}
+		}
 	}
 
 	/**
@@ -93,5 +207,97 @@ class Ezoic_Integration_Logger
 			is_array($response) || is_object($response) ? print_r($response, true) : $response
 		);
 		self::log_error($message, $context);
+	}
+
+	private static $debug_logs = array();
+	private static $inserted_positions = array();
+
+	/**
+	 * Check if debug mode is enabled via EZOIC_DEBUG constant or URL parameters
+	 *
+	 * @return bool True if debug mode is enabled
+	 */
+	private static function is_debug_enabled()
+	{
+		// Check for EZOIC_DEBUG constant
+		if (defined('EZOIC_DEBUG') && EZOIC_DEBUG) {
+			return true;
+		}
+
+		// Check for URL parameters set to 1
+		if ((isset($_GET['ez_js_debugger']) && $_GET['ez_js_debugger'] == '1') ||
+			(isset($_GET['ez_js_preview']) && $_GET['ez_js_preview'] == '1')
+		) {
+			return true;
+		}
+
+		// Check for cookies set to 1
+		return (isset($_COOKIE['ez_js_debugger']) && $_COOKIE['ez_js_debugger'] == '1') ||
+			(isset($_COOKIE['ez_js_preview']) && $_COOKIE['ez_js_preview'] == '1');
+	}
+
+
+	/**
+	 * Render debug logs to ezJsDebug system
+	 */
+	public static function render_console_output()
+	{
+		static $rendered = false;
+
+		if ($rendered || empty(self::$debug_logs)) {
+			return;
+		}
+
+		echo '<script type="text/javascript">';
+
+		// Output debug logs as JavaScript variable
+		if (!empty(self::$debug_logs)) {
+			echo 'window.ezJsDebug = ' . json_encode(self::$debug_logs) . ";\n";
+		}
+
+		// Check if inserted positions actually exist on the page
+		if (!empty(self::$inserted_positions)) {
+			echo "
+		// Make verification function available globally for debugger
+		window.ezAdVerification = function() {
+			var insertedPositions = " . json_encode(self::$inserted_positions) . ";
+			insertedPositions.forEach(function(positionId) {
+					var foundMethods = [];
+
+					// Look for actual Ezoic ad placement divs
+					var placeholderSelector = '#ezoic-pub-ad-placeholder-' + positionId;
+					if (document.querySelector(placeholderSelector) !== null) foundMethods.push('ezoic placeholder div');
+
+					// Also check via HTML search for the div ID
+					if (document.body.innerHTML.indexOf('id=\"ezoic-pub-ad-placeholder-' + positionId + '\"') !== -1) foundMethods.push('placeholder id in HTML');
+
+					var found = foundMethods.length > 0;
+					var matchDetails = found ? ' (found via: ' + foundMethods.join(', ') + ')' : '';
+
+					// Add verification result to debug logs
+					if (!window.ezJsDebug) window.ezJsDebug = [];
+					window.ezJsDebug.push({
+						'timestamp': Date.now() / 1000,
+						'type': found ? 'success' : 'warn',
+						'context': 'Ad Verification',
+						'message': 'Position ' + positionId + ' ' + (found ? 'verified on page' : 'not found on page') + matchDetails,
+						'position_id': positionId
+					});
+			});
+		};
+
+		// Run on load and notify debugger when complete
+		window.addEventListener('load', function() {
+			window.ezAdVerification();
+			window.dispatchEvent(new CustomEvent('ezDebugDataUpdated'));
+		});
+		";
+		}
+
+		echo '</script>';
+
+		$rendered = true;
+		self::$debug_logs = array();
+		self::$inserted_positions = array();
 	}
 }

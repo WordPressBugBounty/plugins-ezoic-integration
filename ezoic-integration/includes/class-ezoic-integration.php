@@ -347,6 +347,21 @@ namespace Ezoic_Namespace {
 		}
 
 		/**
+		 * Check if JavaScript integration is enabled with WordPress placeholders
+		 */
+		public static function should_use_js_placeholders()
+		{
+			// Check if JavaScript integration is enabled
+			$js_enabled = get_option('ezoic_js_integration_enabled', false);
+
+			// Check if WordPress placeholders should be used in JS mode
+			$js_options = get_option('ezoic_js_integration_options', array());
+			$use_wp_placeholders = isset($js_options['js_use_wp_placeholders']) && $js_options['js_use_wp_placeholders'];
+
+			return ($js_enabled && $use_wp_placeholders);
+		}
+
+		/**
 		 * Load all rest endpoints that need to be available globally
 		 */
 		private function define_rest_endpoints()

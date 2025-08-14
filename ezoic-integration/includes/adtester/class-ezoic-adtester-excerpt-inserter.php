@@ -66,6 +66,13 @@ class Ezoic_AdTester_Excerpt_Inserter extends Ezoic_AdTester_Inserter
 				$position = ez_stripos($content, $tag);
 
 				$content = ez_substr_replace($content, $placeholder_markup, $position, 0);
+				Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+				Ezoic_Integration_Logger::console_debug(
+					"Position {$placeholder->position_id} inserted before excerpt tag {$excerpt_tag}",
+					'Excerpt Ads',
+					'info',
+					$placeholder->position_id
+				);
 
 				return $content;
 			}
@@ -75,6 +82,13 @@ class Ezoic_AdTester_Excerpt_Inserter extends Ezoic_AdTester_Inserter
 			$position = ez_stripos($content, $tag);
 
 			$content = ez_substr_replace($content, $placeholder_markup, $position + ez_strlen($tag), 0);
+			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+			Ezoic_Integration_Logger::console_debug(
+				"Position {$placeholder->position_id} inserted after excerpt tag {$excerpt_tag}",
+				'Excerpt Ads',
+				'info',
+				$placeholder->position_id
+			);
 
 			return $content;
 		}

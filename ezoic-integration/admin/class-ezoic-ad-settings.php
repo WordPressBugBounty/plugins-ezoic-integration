@@ -319,8 +319,6 @@ class Ezoic_Integration_Ad_Settings
 		// Reset active placements to original API data (this will rebuild active_placements)
 		$this->reset_active_placements_to_original();
 
-		Ezoic_AdTester::log('resetting settings');
-
 		// Store config
 		$this->adtester->update_config();
 	}
@@ -448,8 +446,6 @@ class Ezoic_Integration_Ad_Settings
 
 		if ($payload->excludeWordCount !== '' && \is_numeric($payload->excludeWordCount)) {
 			$config->skip_word_count = $payload->excludeWordCount;
-		} else {
-			$config->skip_word_count = null;
 		}
 
 		//Ezoic_AdTester::log( 'saving general settings' );
@@ -473,7 +469,7 @@ class Ezoic_Integration_Ad_Settings
 		$domain_status = new Ezoic_AdTester_Domain_Status(true);
 
 		// Load Vue-based interface
-		wp_enqueue_script('ezoic_integration', plugin_dir_url(__FILE__) . 'js/ad-settings.js', array(), rand());
+		wp_enqueue_script('ezoic_integration', plugin_dir_url(__FILE__) . 'js/ad-settings.js', array(), rand(), true);
 
 		// Remove script which causes vuejs conflicts
 		wp_deregister_script('js_files_for_wp_admin');
@@ -513,10 +509,7 @@ class Ezoic_Integration_Ad_Settings
 			$excludeParents = '["' . implode('","', $this->adtester->config->parent_filters) . '"]';
 		}
 
-		$excludeWordCount = '';
-		if (isset($this->adtester->config->skip_word_count) && $this->adtester->config->skip_word_count > 0) {
-			$excludeWordCount = $this->adtester->config->skip_word_count;
-		}
+		$excludeWordCount = isset($this->adtester->config->skip_word_count) && $this->adtester->config->skip_word_count !== null ? $this->adtester->config->skip_word_count : 10;
 
 		$userRolesWithAdsDisabled = '[]';
 		if (isset($this->adtester->config->user_roles_with_ads_disabled)) {
@@ -688,6 +681,10 @@ class Ezoic_Integration_Ad_Settings
 						"name": "After Excerpt",
 						"hasOption": true
 					}, {
+						"id": "after_widget",
+						"name": "After Widget",
+						"hasOption": true
+					}, {
 						"id": "before_element",
 						"name": "Before HTML Element",
 						"hasOption": true
@@ -719,6 +716,10 @@ class Ezoic_Integration_Ad_Settings
 						"name": "After Excerpt",
 						"hasOption": true
 					}, {
+						"id": "after_widget",
+						"name": "After Widget",
+						"hasOption": true
+					}, {
 						"id": "before_element",
 						"name": "Before HTML Element",
 						"hasOption": true
@@ -747,16 +748,9 @@ class Ezoic_Integration_Ad_Settings
 				],
 				"revenues": <?php echo \json_encode($this->adtester->revenues); ?>,
 				"general": {
-					"paragraphTags": <?php echo $paragraphTags ?>,
-					"excerptTags": <?php echo $excerptTags ?>,
-					"excludeParents": <?php echo $excludeParents ?>,
-					"excludeClasses": <?php echo $excludeClasses ?>,
-					"excludeWordCount": "<?php echo $excludeWordCount ?>",
-					"sidebarId": "<?php echo $this->adtester->config->sidebar_id ?>",
-					"userRoles": <?php echo \json_encode($this->get_user_roles()) ?>,
-					"userRolesWithAdsDisabled": <?php echo $userRolesWithAdsDisabled ?>,
-					"metaTags": <?php echo $metaTags ?>,
-					"excludeUrls": <?php echo $excludeUrls ?>,
+					"activePlacements": <?php echo \json_encode($this->adtester->config->active_placements) ?>,
+					"adminUrl": "<?php echo admin_url() ?>",
+					"availableSidebars": <?php echo \json_encode($this->get_wordpress_sidebars()) ?>,
 					"enableAdPos": <?php if ($this->adtester->config->enable_adpos_integration) {
 										echo 'true';
 									} else {
@@ -767,8 +761,17 @@ class Ezoic_Integration_Ad_Settings
 													} else {
 														echo 'false';
 													} ?>,
+					"excerptTags": <?php echo $excerptTags ?>,
+					"excludeClasses": <?php echo $excludeClasses ?>,
+					"excludeParents": <?php echo $excludeParents ?>,
+					"excludeUrls": <?php echo $excludeUrls ?>,
+					"excludeWordCount": "<?php echo $excludeWordCount ?>",
 					"jsIntegrationEnabled": <?php echo get_option('ezoic_js_integration_enabled', false) ? 'true' : 'false'; ?>,
-					"activePlacements": <?php echo \json_encode($this->adtester->config->active_placements) ?>
+					"metaTags": <?php echo $metaTags ?>,
+					"paragraphTags": <?php echo $paragraphTags ?>,
+					"sidebarId": "<?php echo $this->adtester->config->sidebar_id ?>",
+					"userRoles": <?php echo \json_encode($this->get_user_roles()) ?>,
+					"userRolesWithAdsDisabled": <?php echo $userRolesWithAdsDisabled ?>
 				}
 			}
 		</script>
@@ -848,5 +851,23 @@ class Ezoic_Integration_Ad_Settings
 		\sort($userRoles);
 
 		return $userRoles;
+	}
+
+	public function get_wordpress_sidebars()
+	{
+		global $wp_registered_sidebars;
+
+		$sidebars = array();
+
+		if (isset($wp_registered_sidebars) && is_array($wp_registered_sidebars)) {
+			foreach ($wp_registered_sidebars as $id => $sidebar) {
+				$sidebars[] = array(
+					'id' => $id,
+					'name' => $sidebar['name']
+				);
+			}
+		}
+
+		return $sidebars;
 	}
 }

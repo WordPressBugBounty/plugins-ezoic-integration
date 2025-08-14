@@ -36,10 +36,24 @@ class Ezoic_AdTester_Native_Inserter extends Ezoic_AdTester_Inserter
 			$placeholder = $to_insert[$rule->placeholder_id];
 			if ($rule->display === 'after_content') {
 				$content = $content . $placeholder->embed_code();
+				Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+				Ezoic_Integration_Logger::console_debug(
+					"Position {$placeholder->position_id} inserted after content",
+					'Native Ads',
+					'info',
+					$placeholder->position_id
+				);
 			}
 
 			if ($rule->display === 'before_content') {
 				$content = $placeholder->embed_code() . $content;
+				Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+				Ezoic_Integration_Logger::console_debug(
+					"Position {$placeholder->position_id} inserted before content",
+					'Native Ads',
+					'info',
+					$placeholder->position_id
+				);
 			}
 		}
 

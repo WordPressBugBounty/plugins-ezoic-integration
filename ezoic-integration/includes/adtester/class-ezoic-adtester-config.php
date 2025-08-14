@@ -167,7 +167,7 @@ class Ezoic_AdTester_Config
 		$response = wp_remote_post($requestURL, $requestArgs);
 
 		if (is_wp_error($response)) {
-			error_log('Unable to sync configuration: ' . $response->get_error_message());
+			Ezoic_Integration_Logger::log_error('Unable to sync configuration: ' . $response->get_error_message(), 'AdTester');
 			//throw new \Exception( $response->get_error_message() );
 		}
 

@@ -77,7 +77,7 @@ class Ezoic_AdTester_Domain_Status
 				$this->set($deserialized->data);
 			}
 		} else {
-			\error_log('Error communicating with backend: ' . print_r($response, true));
+			Ezoic_Integration_Logger::log_error('Error communicating with backend: ' . print_r($response, true), 'AdTester');
 			$this->has_error = true;
 			$this->error_message = print_r($response, true);
 		}

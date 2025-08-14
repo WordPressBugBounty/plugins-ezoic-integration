@@ -162,6 +162,13 @@ if (!function_exists('ez_ctype_space')) {
 if (!function_exists('ez_encode_unicode')) {
 	function ez_encode_unicode($content)
 	{
+		// Safety check: return original content if empty or null
+		if (empty($content)) {
+			return $content;
+		}
+
+		$original_content = $content; // Backup original content
+
 		$nonAsciiUnicodeRegex = '/[\x{80}-\x{10FFFF}]/u';
 		if (!preg_match($nonAsciiUnicodeRegex, $content)) {
 			return $content;
@@ -176,11 +183,22 @@ if (!function_exists('ez_encode_unicode')) {
 			return $placeholder;
 		}, $content);
 
+		// Safety check: if script extraction failed, return original
+		if ($content === null || (empty($content) && !empty($original_content))) {
+			return $original_content;
+		}
+
 		// Step 2: Encode unicode characters (but not inside scripts)
 		$content = preg_replace_callback($nonAsciiUnicodeRegex, function ($match) {
 			// Our regex will only match one character at a time, so take $match[0] here and encode.
 			$utf8 = $match[0];
 			$binary = iconv('UTF-8', 'UTF-32BE', $utf8);
+
+			// Handle iconv failure gracefully
+			if ($binary === false) {
+				return $utf8; // Return original character if iconv fails
+			}
+
 			$entity = vsprintf('&#x%X;', unpack('N', $binary));
 			return $entity;
 		}, $content);
@@ -189,6 +207,12 @@ if (!function_exists('ez_encode_unicode')) {
 		foreach ($script_placeholders as $index => $script) {
 			$content = str_replace('<!--SCRIPT_PLACEHOLDER_' . $index . '-->', $script, $content);
 		}
+
+		// Final safety check: if final result is empty, return original
+		if (empty($content) && !empty($original_content)) {
+			return $original_content;
+		}
+
 		return $content;
 	}
 }

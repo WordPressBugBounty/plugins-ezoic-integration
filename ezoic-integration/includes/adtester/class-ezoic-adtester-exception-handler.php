@@ -25,12 +25,12 @@ class Ezoic_AdTester_Exception_Handler {
 			$serialized = $serializer->serialize();
 
 			// Always log the error
-			\error_log( $serialized );
+			Ezoic_Integration_Logger::log_error($serialized, 'AdTester');
 
 			// Send error home
 			$this->send_home( $serialized );
 		} catch ( \Exception $ex ) {
-			\error_log( 'unable to log exception: ' . print_r( $ex, true ) );
+			Ezoic_Integration_Logger::log_error('Unable to log exception: ' . print_r($ex, true), 'AdTester');
 		}
 	}
 
@@ -52,7 +52,7 @@ class Ezoic_AdTester_Exception_Handler {
 
 			// If an error was returned, log it
 			if ( \is_wp_error( $response ) ) {
-				error_log( 'unable to force generation of placeholders, please refresh and try again' );
+				Ezoic_Integration_Logger::log_error('Unable to force generation of placeholders, please refresh and try again', 'AdTester');
 				return;
 			}
 		}

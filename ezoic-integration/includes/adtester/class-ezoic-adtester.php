@@ -91,12 +91,17 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		if ($this->use_html_inserter()) {
 			$loader->add_action('wp_head', $this, 'output_buffer_start', PHP_INT_MAX);
-			$loader->add_action('wp_footer', $this, 'output_buffer_end', 20);
+
+			// Register multiple priority fallbacks for wp_footer
+			$this->register_footer_fallbacks($loader);
+
+			// Also try alternative hooks as final backup
+			$loader->add_action('shutdown', $this, 'output_buffer_cleanup', 999);
 		}
 
 		$loader->add_filter('the_content', $this, 'set_content_placeholder', PHP_INT_MAX);
 		$loader->add_filter('the_excerpt', $this, 'set_excerpt_placeholder');
-		$loader->add_filter('widgets_init', $this, 'set_sidebar_placeholder');
+		$loader->add_action('wp', $this, 'set_sidebar_placeholder');
 		$loader->add_action('wp_body_open', $this, 'set_before_content_placeholder');
 		$loader->add_action('wp_footer', $this, 'set_after_content_placeholder');
 
@@ -484,14 +489,39 @@ class Ezoic_AdTester extends Ezoic_Feature
 			return $content;
 		}
 
+		// Store original content for fallback
+		$original_content = $content;
+
 		try {
 			// Invoke server-side HTML element inserter
 			$inserter = new Ezoic_AdTester_HTML_Inserter($this->config);
-			$content = $inserter->insert_server($content);
+			$inserted_content = $inserter->insert_server($content);
+
+			// Return original content if insertion failed or resulted in empty/truncated content
+			// Check if content is empty or significantly smaller than original (less than 10%)
+			$original_length = strlen($original_content);
+			$inserted_length = strlen($inserted_content);
+
+			if (empty($inserted_content) || ($original_length > 1000 && $inserted_length < ($original_length * 0.1))) {
+				Ezoic_Integration_Logger::log_error(
+					"HTML insertion failed - returned original content. Original length: {$original_length}, Inserted length: {$inserted_length}",
+					'HTML Ads'
+				);
+				return $original_content;
+			}
+
+			$content = $inserted_content;
 		} catch (\Exception $ex) {
 			// Send error to our backend
 			$handler = new Ezoic_AdTester_Exception_Handler($ex, array('module' => 'adtester', 'task' => 'final content insertion'));
 			$handler->handle();
+
+			// Log and return original content on exception
+			Ezoic_Integration_Logger::log_error(
+				"HTML insertion exception - returned original content: " . $ex->getMessage(),
+				'HTML Ads'
+			);
+			return $original_content;
 		}
 
 		return $content;
@@ -544,15 +574,32 @@ class Ezoic_AdTester extends Ezoic_Feature
 			return $content;
 		}
 
+		// Store original content for fallback
+		$original_content = $content;
 		$this->excerpt_number++;
 
 		try {
 			$inserter = new Ezoic_AdTester_Excerpt_Inserter($this->config, $this->excerpt_number);
-			$content = $inserter->insert($content);
+			$inserted_content = $inserter->insert($content);
+
+			// Return original content if insertion failed or resulted in empty content
+			if (empty($inserted_content)) {
+				Ezoic_Integration_Logger::console_debug(
+					"Content insertion failed - no content returned",
+					'Content Ads',
+					'warn'
+				);
+				return $original_content;
+			}
+
+			$content = $inserted_content;
 		} catch (\Exception $ex) {
 			// Send error to our backend
 			$handler = new Ezoic_AdTester_Exception_Handler($ex, array('module' => 'adtester', 'task' => 'excerpt insertion'));
 			$handler->handle();
+
+			// Return original content on exception
+			return $original_content;
 		}
 
 		return $content;
@@ -571,24 +618,60 @@ class Ezoic_AdTester extends Ezoic_Feature
 			return $content;
 		}
 
+		// Check if content is empty before attempting any insertion
+		if (!isset($content) || strlen($content) === 0) {
+			return $content;
+		}
+
+		// Store original content for fallback
+		$original_content = $content;
+
 		// Use new processor if available
 		if (\class_exists('DOMDocument') && isset($_GET['ez_wp_new_inserter']) && $_GET['ez_wp_new_inserter'] == '1') {
 			try {
 				$inserter = new Ezoic_AdTester_Content_Inserter3($this->config);
-				$content = $inserter->insert($content);
+				$inserted_content = $inserter->insert($content);
 
-				return $content;
+				// Return original content if insertion failed or resulted in empty content
+				if (empty($inserted_content)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Content insertion failed - no content returned",
+						'Content Ads',
+						'warn'
+					);
+					return $original_content;
+				}
+
+				return $inserted_content;
 			} catch (\Exception $ex) {
-				\error_log('error using new insertion engine: ' . $ex);
+				Ezoic_Integration_Logger::log_error('Error using new insertion engine: ' . $ex, 'AdTester');
+				// Continue to fallback inserters below
 			}
 		}
 
 		// Use legacy inserter
 		if (!$this->can_use_new_inserter()) {
-			$inserter = new Ezoic_AdTester_Content_Inserter($this->config);
-			$content = $inserter->insert($content);
+			try {
+				$inserter = new Ezoic_AdTester_Content_Inserter($this->config);
+				$inserted_content = $inserter->insert($content);
 
-			return $content;
+				// Return original content if insertion failed or resulted in empty content
+				if (empty($inserted_content)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Content insertion failed - no content returned",
+						'Content Ads',
+						'warn'
+					);
+					return $original_content;
+				}
+
+				return $inserted_content;
+			} catch (\Exception $ex) {
+				// Send error to our backend
+				$handler = new Ezoic_AdTester_Exception_Handler($ex, array('module' => 'adtester', 'task' => 'content insertion fallback'));
+				$handler->handle();
+				return $original_content;
+			}
 		}
 
 		// Attempt to use the new inserter, if it fails, fallback to old inserter
@@ -600,10 +683,41 @@ class Ezoic_AdTester extends Ezoic_Feature
 				$commented_content = "<!--[if IE 3 ]>Debugging Pre Insertion Content Start: \n" . print_r($content, true) . "\n<![endif]-->";
 				$content = $content . $commented_content;
 			}
-			$content = $inserter->insert($content);
+			$inserted_content = $inserter->insert($content);
+
+			// Return original content if insertion failed or resulted in empty content
+			if (empty($inserted_content)) {
+				Ezoic_Integration_Logger::console_debug(
+					"Content insertion failed - no content returned",
+					'Content Ads',
+					'warn'
+				);
+				return $original_content;
+			}
+
+			$content = $inserted_content;
 		} catch (\Exception $ex) {
-			$inserter = new Ezoic_AdTester_Content_Inserter($this->config);
-			$content = $inserter->insert($content);
+			try {
+				$inserter = new Ezoic_AdTester_Content_Inserter($this->config);
+				$inserted_content = $inserter->insert($original_content);
+
+				// Return original content if insertion failed or resulted in empty content
+				if (empty($inserted_content)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Content insertion failed - no content returned",
+						'Content Ads',
+						'warn'
+					);
+					return $original_content;
+				}
+
+				$content = $inserted_content;
+			} catch (\Exception $fallback_ex) {
+				// Both inserters failed, return original content
+				$handler = new Ezoic_AdTester_Exception_Handler($fallback_ex, array('module' => 'adtester', 'task' => 'content insertion final fallback'));
+				$handler->handle();
+				return $original_content;
+			}
 
 			// Send error to our backend
 			$handler = new Ezoic_AdTester_Exception_Handler($ex, array('module' => 'adtester', 'task' => 'content insertion'));
@@ -704,6 +818,72 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		echo $content;
 	}
+
+	/**
+	 * Register multiple fallback hooks with different priorities to ensure HTML insertion works
+	 */
+	private function register_footer_fallbacks($loader)
+	{
+		// Use a single priority first
+		$loader->add_action('wp_footer', $this, 'robust_output_buffer_end', 5);
+
+		// Emergency fallbacks only for extreme edge cases
+		$loader->add_action('shutdown', $this, 'output_buffer_cleanup', 999);
+		$loader->add_action('wp_print_footer_scripts', $this, 'robust_output_buffer_end', 999);
+	}
+
+	private $buffer_processed = false;
+
+	/**
+	 * Robust output buffer end - prevents multiple processing
+	 */
+	public function robust_output_buffer_end()
+	{
+		// Prevent multiple processing
+		if ($this->buffer_processed) {
+			return;
+		}
+
+		// Check if there's actually an active buffer
+		if (ob_get_level() === 0) {
+			return;
+		}
+
+		$this->buffer_processed = true;
+
+		$content = ob_get_clean();
+
+		$content = $this->set_final_content_placeholder($content);
+		echo $content;
+	}
+
+
+	/**
+	 * Ultimate cleanup method - final safety net
+	 */
+	public function output_buffer_cleanup()
+	{
+		// If we already processed the buffer, don't do it again
+		if ($this->buffer_processed) {
+			return;
+		}
+
+		// Check if there's still an active output buffer
+		if (ob_get_level() > 0) {
+			$this->buffer_processed = true;
+			$content = ob_get_clean();
+
+			Ezoic_Integration_Logger::console_debug(
+				"HTML insertion via shutdown hook - wp_footer priorities failed, using fallback.",
+				'HTML Ads',
+				'warn'
+			);
+
+			$content = $this->set_final_content_placeholder($content);
+			echo $content;
+		}
+	}
+
 
 	/**
 	 * Determine if the feature is enabled
@@ -878,15 +1058,13 @@ class Ezoic_AdTester extends Ezoic_Feature
 	 */
 	private function use_html_inserter()
 	{
-		$use_html_inserter = false;
-
 		foreach ($this->config->placeholder_config as $ph_config) {
 			if ($ph_config->display == 'before_element' || $ph_config->display == 'after_element') {
-				$use_html_inserter = true;
+				return true;
 			}
 		}
 
-		return $use_html_inserter;
+		return false;
 	}
 
 	public function update_config()
@@ -922,6 +1100,40 @@ class Ezoic_AdTester extends Ezoic_Feature
 			$info .= PHP_EOL;
 
 			$info .= 'Placeholders: ' . \count($this->config->placeholders) . PHP_EOL;
+
+			// Add active placements info
+			if (isset($this->config->active_placements)) {
+				if (is_object($this->config->active_placements)) {
+					// If it's an object (like the JSON structure you showed)
+					$active_placements_array = (array) $this->config->active_placements;
+					$info .= 'Active Placements: ' . \count($active_placements_array) . PHP_EOL;
+					if (!empty($active_placements_array)) {
+						$info .= '  Placements: ' . PHP_EOL;
+						foreach ($active_placements_array as $placement_name => $placement_id) {
+							$info .= '    ' . $placement_name . ': ' . $placement_id . PHP_EOL;
+						}
+					}
+				} elseif (is_array($this->config->active_placements)) {
+					// If it's an array of objects
+					$info .= 'Active Placements: ' . \count($this->config->active_placements) . PHP_EOL;
+					if (!empty($this->config->active_placements)) {
+						$placement_names = array();
+						foreach ($this->config->active_placements as $placement) {
+							if (isset($placement->id) && isset($placement->name)) {
+								$placement_names[] = $placement->name . ': ' . $placement->id;
+							} elseif (isset($placement->id)) {
+								$placement_names[] = 'ID: ' . $placement->id;
+							}
+						}
+						if (!empty($placement_names)) {
+							$info .= '  Placements: ' . PHP_EOL;
+							foreach ($placement_names as $placement_info) {
+								$info .= '    ' . $placement_info . PHP_EOL;
+							}
+						}
+					}
+				}
+			}
 
 			$info .= PHP_EOL;
 
@@ -992,6 +1204,6 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 	public static function log($str)
 	{
-		error_log('[ Ezoic ] ' . $str);
+		Ezoic_Integration_Logger::log($str, 'AdTester');
 	}
 }

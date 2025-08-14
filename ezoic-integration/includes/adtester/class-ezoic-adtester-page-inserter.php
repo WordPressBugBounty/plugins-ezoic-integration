@@ -26,6 +26,13 @@ class Ezoic_AdTester_Page_Inserter extends Ezoic_AdTester_Inserter
 
 				if ($rule->display === $insert_position) {
 					echo $placeholder->embed_code();
+					Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
+					Ezoic_Integration_Logger::console_debug(
+						"Position {$placeholder->position_id} inserted at {$insert_position}",
+						'Page Ads',
+						'info',
+						$placeholder->position_id
+					);
 				}
 			}
 		}

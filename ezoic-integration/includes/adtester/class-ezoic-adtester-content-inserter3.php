@@ -22,6 +22,11 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 	{
 		// Validation
 		if (!isset($content) || \ez_strlen($content) === 0) {
+			Ezoic_Integration_Logger::console_debug(
+				"Content insertion skipped - content is empty or null",
+				'Content Ads',
+				'warn'
+			);
 			return $content;
 		}
 

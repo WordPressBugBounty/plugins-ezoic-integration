@@ -110,6 +110,13 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.18.1 =
+* Minor bug fixes
+
+= 2.18.0 =
+* Improved ad placement accuracy and reliability
+* Enhanced logging and error handling
+
 = 2.17.3 =
 * Improve ad placement logic to prevent duplicates
 
@@ -145,18 +152,3 @@ Yes, you have full control over ad categories and can block specific ads. The pl
 
 = 2.15.3 =
 * Add support for Open.Video hosting
-
-= 2.15.2 =
-* Enhance JavaScript integration support
-
-= 2.15.1 =
-* Update optimization features
-
-= 2.14.4 =
-* Minor bug fix for cookie handling
-
-= 2.14.3 =
-* Sync Placement Service integration
-
-= 2.14.2 =
-* Minor bug fixes and optimizations
