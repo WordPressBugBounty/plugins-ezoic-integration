@@ -8,6 +8,8 @@ namespace Ezoic_Namespace;
 if (class_exists('WP_Widget')) {
 	class Ezoic_AdPos_Widget extends \WP_Widget
 	{
+		private static $inserted_position_ids = array();
+
 		public function __construct()
 		{
 			$widget_options = array(
@@ -23,9 +25,26 @@ if (class_exists('WP_Widget')) {
 			if (isset($instance['position'])) {
 				// JavaScript integration: use AdTester rules
 				$sidebar_id = isset($args['id']) ? $args['id'] : 'sidebar';
+				$widget_position = $instance['position'];
+
 				$placeholder = $this->get_sidebar_placeholder($sidebar_id, $instance);
 
 				if ($placeholder !== null) {
+					// Check if this position ID has already been inserted by another AdPos widget
+					$position_id = $placeholder->position_id;
+					if (in_array($position_id, self::$inserted_position_ids)) {
+						Ezoic_Integration_Logger::console_debug(
+							"AdPos widget skipped at sidebar position {$widget_position} - already inserted",
+							'AdPos Widget',
+							'info',
+							$position_id
+						);
+						return;
+					}
+
+					// Mark this position ID as inserted
+					self::$inserted_position_ids[] = $position_id;
+
 					$embed_code = $placeholder->embed_code();
 					echo $embed_code;
 
@@ -33,13 +52,24 @@ if (class_exists('WP_Widget')) {
 					if (preg_match('/id="ezoic-pub-ad-placeholder-(\d+)"/', $embed_code, $matches)) {
 						$position_id = $matches[1];
 						Ezoic_Integration_Logger::track_insertion($position_id);
+						Ezoic_Integration_Logger::console_debug(
+							"Sidebar inserted for position {$widget_position}",
+							'AdPos Widget',
+							'info',
+							$position_id
+						);
 					}
+				} else {
+					Ezoic_Integration_Logger::console_debug(
+						"AdPos widget: No placeholder found for sidebar={$sidebar_id}, position={$widget_position}",
+						'AdPos Widget',
+						'warn'
+					);
 				}
 			} else {
 				// Server-side processing: use location markers
 				$location = isset($instance['location']) ? $instance['location'] : 'top';
 				echo "<ins class='ezoic-adpos-sidebar' style='display:none !important;visibility:hidden !important;height:0 !important;width:0 !important;' data-loc='" . $location . "'></ins>";
-
 			}
 		}
 

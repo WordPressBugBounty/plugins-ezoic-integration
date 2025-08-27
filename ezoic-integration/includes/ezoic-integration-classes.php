@@ -5,6 +5,7 @@ require_once( dirname( __FILE__ ) . '/class-ezoic-feature.php' );
 // Utility classes
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-logger.php' );
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-path-sanitizer.php' );
+require_once( dirname( __FILE__ ) . '/class-ezoic-integration-plugin-data-service.php' );
 
 // WP Integration
 require_once( dirname( __FILE__ ) . '/integration/class-ezoic-wp-integration.php' );

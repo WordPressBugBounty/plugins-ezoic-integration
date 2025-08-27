@@ -15,7 +15,7 @@ class Ezoic_AdTester_Excerpt_Inserter extends Ezoic_AdTester_Inserter
 
 	public function insert($content)
 	{
-		$rules = $this->get_filtered_placeholder_rules();
+		$rules = $this->config->filtered_placeholder_rules;
 
 		// Insert placeholders
 		foreach ($rules as $rule) {

@@ -18,7 +18,7 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 		$this->before_paragraph_pos = $this->paragraph_tag_positions($content, true);
 		$this->after_paragraph_pos = $this->paragraph_tag_positions($content, false);
 
-		$rules = $this->get_filtered_placeholder_rules();
+		$rules = $this->config->filtered_placeholder_rules;
 
 		// Sort rules by paragraph number
 		\usort($rules, function ($a, $b) {
@@ -33,6 +33,17 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 		foreach ($rules as $rule) {
 			if ($rule->display != 'disabled') {
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
+
+				// Skip if this placeholder already exists in content
+				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - placeholder already exists in content.",
+						'Content Ads',
+						'info',
+						$rule->placeholder_id
+					);
+					continue;
+				}
 
 				switch ($rule->display) {
 					case 'before_paragraph':

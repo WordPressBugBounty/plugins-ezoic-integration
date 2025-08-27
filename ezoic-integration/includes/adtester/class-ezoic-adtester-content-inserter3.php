@@ -30,7 +30,7 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
-		$rules = $this->get_filtered_placeholder_rules();
+		$rules = $this->config->filtered_placeholder_rules;
 
 		// Stop processing if there are no rules to process for this page
 		if (\count($rules) === 0) {
@@ -71,6 +71,18 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 			if (isset($ruleMap[$nodeIdx])) {
 				$insertion_rule = $ruleMap[$nodeIdx];
 				$placeholder = $this->config->placeholders[$insertion_rule->placeholder_id];
+
+				// Skip if this placeholder already exists in content
+				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - placeholder already exists in content.",
+						'Content Ads',
+						'info',
+						$insertion_rule->placeholder_id
+					);
+					$nodeIdx++;
+					continue;
+				}
 
 				switch ($insertion_rule->display) {
 					case 'before_paragraph':

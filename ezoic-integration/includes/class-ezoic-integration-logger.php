@@ -261,35 +261,76 @@ class Ezoic_Integration_Logger
 		// Make verification function available globally for debugger
 		window.ezAdVerification = function() {
 			var insertedPositions = " . json_encode(self::$inserted_positions) . ";
-			insertedPositions.forEach(function(positionId) {
-					var foundMethods = [];
+			var placeholderCache = new Map();
+			var htmlCache = document.body.innerHTML;
 
-					// Look for actual Ezoic ad placement divs
+			function verifyPosition(positionId) {
+				var cacheKey = 'placeholder-' + positionId;
+				var foundMethods = [];
+
+				// Check cached selector result
+				if (!placeholderCache.has(cacheKey)) {
 					var placeholderSelector = '#ezoic-pub-ad-placeholder-' + positionId;
-					if (document.querySelector(placeholderSelector) !== null) foundMethods.push('ezoic placeholder div');
+					var element = document.querySelector(placeholderSelector);
+					placeholderCache.set(cacheKey, element !== null);
+				}
 
-					// Also check via HTML search for the div ID
-					if (document.body.innerHTML.indexOf('id=\"ezoic-pub-ad-placeholder-' + positionId + '\"') !== -1) foundMethods.push('placeholder id in HTML');
+				if (placeholderCache.get(cacheKey)) {
+					foundMethods.push('ezoic placeholder div');
+				}
 
-					var found = foundMethods.length > 0;
-					var matchDetails = found ? ' (found via: ' + foundMethods.join(', ') + ')' : '';
+				if (htmlCache.indexOf('id=\"ezoic-pub-ad-placeholder-' + positionId + '\"') !== -1) {
+					foundMethods.push('placeholder id in HTML');
+				}
 
-					// Add verification result to debug logs
-					if (!window.ezJsDebug) window.ezJsDebug = [];
-					window.ezJsDebug.push({
-						'timestamp': Date.now() / 1000,
-						'type': found ? 'success' : 'warn',
-						'context': 'Ad Verification',
-						'message': 'Position ' + positionId + ' ' + (found ? 'verified on page' : 'not found on page') + matchDetails,
-						'position_id': positionId
-					});
+				var found = foundMethods.length > 0;
+				var matchDetails = found ? ' (found via: ' + foundMethods.join(', ') + ')' : '';
+
+				if (!window.ezJsDebug) window.ezJsDebug = [];
+				window.ezJsDebug.push({
+					'timestamp': Date.now() / 1000,
+					'type': found ? 'success' : 'warn',
+					'context': 'Ad Verification',
+					'message': (found ? 'Verified placement on page' : 'Not found on page') + matchDetails,
+					'position_id': positionId
+				});
+			}
+
+			function processBatch(positions, batchSize, callback) {
+				if (positions.length === 0) {
+					if (callback) callback();
+					return;
+				}
+
+				var batch = positions.splice(0, batchSize);
+				batch.forEach(verifyPosition);
+
+				// Use setTimeout to yield control back to browser
+				setTimeout(function() {
+					processBatch(positions, batchSize, callback);
+				}, 0);
+			}
+
+			var positionsCopy = insertedPositions.slice();
+			processBatch(positionsCopy, 10, function() {
+				// Batch processing complete
+				window.dispatchEvent(new CustomEvent('ezDebugDataUpdated'));
 			});
 		};
 
 		// Run on load and notify debugger when complete
 		window.addEventListener('load', function() {
-			window.ezAdVerification();
-			window.dispatchEvent(new CustomEvent('ezDebugDataUpdated'));
+			// Use requestIdleCallback to defer heavy DOM operations
+			if (window.requestIdleCallback) {
+				window.requestIdleCallback(function() {
+					window.ezAdVerification();
+				});
+			} else {
+				// Fallback with small delay to not block initial rendering
+				setTimeout(function() {
+					window.ezAdVerification();
+				}, 50);
+			}
 		});
 		";
 		}

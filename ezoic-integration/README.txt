@@ -110,7 +110,11 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
-= 2.18.1 =
+= 2.19.0 =
+* Enhance ad insertion systems
+* Minor bug fixes
+
+= 2.18.3 =
 * Minor bug fixes
 
 = 2.18.0 =

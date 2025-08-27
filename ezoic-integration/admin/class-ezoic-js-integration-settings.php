@@ -169,6 +169,9 @@ class Ezoic_JS_Integration_Settings
 			// Disable JavaScript integration
 			update_option('ezoic_js_integration_enabled', false);
 
+			// Send plugin data to notify backend of integration change
+			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
+
 			// Trigger integration recheck by clearing the check time
 			$options = get_option('ezoic_integration_status');
 			$options['check_time'] = '';
@@ -196,6 +199,18 @@ class Ezoic_JS_Integration_Settings
 		$sanitized['js_auto_insert_scripts'] = isset($settings['js_auto_insert_scripts']) ? 1 : 0;
 		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
 		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
+
+		// Check if any relevant settings changed
+		$settings_changed = (
+			$current_options['js_auto_insert_scripts'] !== $sanitized['js_auto_insert_scripts'] ||
+			$current_options['js_enable_privacy_scripts'] !== $sanitized['js_enable_privacy_scripts'] ||
+			$current_options['js_use_wp_placeholders'] !== $sanitized['js_use_wp_placeholders']
+		);
+
+		// Trigger plugin data send if settings changed
+		if ($settings_changed) {
+			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
+		}
 
 		// Check if WP placeholders setting was just enabled
 		$wp_placeholders_just_enabled =

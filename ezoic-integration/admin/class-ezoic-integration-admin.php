@@ -168,30 +168,8 @@ class Ezoic_Integration_Admin
 	 */
 	public function build_integration_request($data, $status = 1)
 	{
-		global $wp;
-
-		$domain = home_url($wp->request);
-		$domain = wp_parse_url($domain)['host'];
-
-		$request_params = array(
-			'domain'    => $domain,
-			'title'     => get_bloginfo('name'),
-			'url'       => get_bloginfo('url'),
-			'data'      => $data,
-			'is_active' => (bool) $status,
-		);
-
-		$request = array(
-			'timeout' => 30,
-			'body'    => json_encode($request_params),
-			'headers' => array(
-				'X-Wordpress-Integration' => 'true',
-				'Expect'                  => '',
-				'X-From-Req'              => 'wp'
-			),
-		);
-
-		return $request;
+		$plugin_data = Ezoic_Integration_Plugin_Data_Service::build_plugin_data((bool) $status);
+		return Ezoic_Integration_Plugin_Data_Service::build_request($plugin_data);
 	}
 
 	public static function set_debug_to_ezoic()
@@ -208,36 +186,11 @@ class Ezoic_Integration_Admin
 				$ezoic_send_debug = array(1, 1);
 			}
 
-			if (! class_exists('WP_Debug_Data')) {
-				require_once ABSPATH . 'wp-admin/includes/class-wp-debug-data.php';
-			}
-			if (! class_exists('WP_Site_Health')) {
-				require_once ABSPATH . 'wp-admin/includes/class-wp-site-health.php';
-			}
-
-			if (class_exists('WP_Debug_Data')) {
-				$info = array();
-				$debug = new \WP_Debug_Data();
-				$debug::check_for_updates();
-
-				try {
-					$info = ($debug::debug_data());
-				} catch (\TypeError $ex) {
-					error_log($ex->getMessage());
-				} catch (\Exception $ex) {
-					error_log($ex->getMessage());
-				}
-
-				$info['wp-get-plugins'] = self::get_plugin_data();
-
-				$request = $this->build_integration_request($info, $ezoic_send_debug[1]);
-
-				//Ezoic_Integration_Request_Utils::GetEzoicServerAddress()
-				$response = wp_remote_post("https://pubdashbackend.ezoic.com/pub/v1/wordpressintegration/v1/wp/debug", $request);
-			}
+			$request = $this->build_integration_request(array(), $ezoic_send_debug[1]);
+			$response = wp_remote_post(Ezoic_Integration_Plugin_Data_Service::ENDPOINT_URL, $request);
 
 			delete_transient('ezoic_send_debug');
-		} // endif;
+		}
 	}
 
 	/**

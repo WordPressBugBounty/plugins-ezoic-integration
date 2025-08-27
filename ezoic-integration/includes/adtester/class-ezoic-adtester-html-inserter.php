@@ -15,7 +15,11 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 
 		foreach ($this->config->placeholder_config as $ph_config) {
 			if ($ph_config->page_type == $this->page_type && ($ph_config->display == 'before_element' || $ph_config->display == 'after_element')) {
-				$rules[] = $ph_config;
+				$placeholder = $this->config->placeholders[$ph_config->placeholder_id];
+
+				if (Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder, true)) {
+					$rules[] = $ph_config;
+				}
 			}
 		}
 
@@ -208,7 +212,7 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 
 			if (count($nodes) === 0) {
 				Ezoic_Integration_Logger::console_debug(
-					"Position {$placeholder->position_id} failed: HTML selector '{$rule->display_option}' not found on page",
+					"Insertion failed: HTML selector '{$rule->display_option}' not found on page",
 					'HTML Ads',
 					'error',
 					$placeholder->position_id
@@ -222,7 +226,7 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 					\pq($found_node)->before($placeholder->embed_code());
 					Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 					Ezoic_Integration_Logger::console_debug(
-						"Position {$placeholder->position_id} inserted before element {$rule->display_option}",
+						"Inserted before element: {$rule->display_option}",
 						'HTML Ads',
 						'info',
 						$placeholder->position_id
@@ -231,7 +235,7 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 					\pq($found_node)->after($placeholder->embed_code());
 					Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 					Ezoic_Integration_Logger::console_debug(
-						"Position {$placeholder->position_id} inserted after element {$rule->display_option}",
+						"Inserted after element: {$rule->display_option}",
 						'HTML Ads',
 						'info',
 						$placeholder->position_id

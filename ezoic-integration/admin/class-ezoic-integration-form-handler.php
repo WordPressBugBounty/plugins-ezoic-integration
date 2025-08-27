@@ -81,6 +81,9 @@ class Ezoic_Integration_Form_Handler
 			// Enable JavaScript integration
 			update_option('ezoic_js_integration_enabled', true);
 
+			// Send plugin data to notify backend of integration change
+			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
+
 			// Disable WordPress integration to prevent conflicts
 			$ezoic_options = \get_option('ezoic_integration_options');
 			if (!$ezoic_options) {
@@ -148,6 +151,9 @@ class Ezoic_Integration_Form_Handler
 
 			// Disable JavaScript integration
 			update_option('ezoic_js_integration_enabled', false);
+
+			// Send plugin data to notify backend of integration change
+			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
 
 			// Trigger integration recheck by clearing the check time
 			$options = \get_option('ezoic_integration_status');

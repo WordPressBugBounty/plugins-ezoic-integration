@@ -20,7 +20,11 @@ class Ezoic_AdTester_Native_Inserter extends Ezoic_AdTester_Inserter
 		foreach ($this->config->placeholder_config as $ph_config) {
 			if ($ph_config->page_type == $this->page_type) {
 				$placeholder = $this->config->placeholders[$ph_config->placeholder_id];
-				if (\substr($placeholder->position_type, 0, 6) === 'native') {
+				if (!$placeholder || \substr($placeholder->position_type, 0, 6) !== 'native') {
+					continue;
+				}
+
+				if (Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder)) {
 					$rules[$ph_config->placeholder_id] = $ph_config;
 					$to_insert[$ph_config->placeholder_id] = $placeholder;
 				}

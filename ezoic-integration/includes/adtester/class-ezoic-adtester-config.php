@@ -245,6 +245,66 @@ class Ezoic_AdTester_Config
 	public function set_active_placement($position_type, $position_id)
 	{
 		$this->active_placements[$position_type] = $position_id;
+
+		// Clean up stale placeholder configurations for this position type
+		$this->cleanup_inactive_placeholder_configs($position_type, $position_id);
+	}
+
+	/**
+	 * Remove placeholder configurations that are no longer active for a position type
+	 */
+	private function cleanup_inactive_placeholder_configs($position_type, $active_position_id)
+	{
+		if (!isset($this->placeholder_config) || !is_array($this->placeholder_config)) {
+			return;
+		}
+
+		$cleaned_configs = array();
+		foreach ($this->placeholder_config as $ph_config) {
+			$placeholder = isset($this->placeholders[$ph_config->placeholder_id]) ? $this->placeholders[$ph_config->placeholder_id] : null;
+
+			if ($placeholder && $placeholder->position_type === $position_type) {
+				// Only keep config if it's for the active placement
+				if ($placeholder->position_id == $active_position_id) {
+					$cleaned_configs[] = $ph_config;
+				}
+			} else {
+				// Keep configs for other position types
+				$cleaned_configs[] = $ph_config;
+			}
+		}
+
+		$this->placeholder_config = $cleaned_configs;
+	}
+
+	/**
+	 * Clean up all inactive placeholder configurations based on current active placements
+	 */
+	public function cleanup_all_inactive_placeholder_configs()
+	{
+		if (!isset($this->placeholder_config) || !is_array($this->placeholder_config)) {
+			return;
+		}
+
+		$cleaned_configs = array();
+		foreach ($this->placeholder_config as $ph_config) {
+			$placeholder = isset($this->placeholders[$ph_config->placeholder_id]) ? $this->placeholders[$ph_config->placeholder_id] : null;
+
+			if ($placeholder) {
+				$position_type = $placeholder->position_type;
+				$active_position_id = $this->get_active_placement($position_type);
+
+				// Keep config only if it's for the active placement or no active placement is set
+				if (!$active_position_id || $placeholder->position_id == $active_position_id) {
+					$cleaned_configs[] = $ph_config;
+				}
+			} else {
+				// Keep configs if placeholder not found (shouldn't happen but be safe)
+				$cleaned_configs[] = $ph_config;
+			}
+		}
+
+		$this->placeholder_config = $cleaned_configs;
 	}
 
 	/**

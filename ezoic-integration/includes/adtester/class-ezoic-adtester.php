@@ -25,6 +25,9 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		$this->config = Ezoic_AdTester_Config::load();
 
+		// Pre-compute filtered rules once for all inserters to use
+		$this->initialize_filtered_rules();
+
 		$this->conditional_tags['archive'] = 	function () {
 			return \is_archive();
 		};
@@ -70,6 +73,70 @@ class Ezoic_AdTester extends Ezoic_Feature
 	}
 
 	/**
+	 * Initialize filtered placeholder rules once for all inserters to use
+	 */
+	private function initialize_filtered_rules()
+	{
+		// Figure out page type using centralized helper
+		$page_type = Ezoic_AdPos::get_current_page_type();
+
+		$rules = array();
+
+		// Only log this once per page load to avoid spam
+		static $logged_page_info = false;
+		if (!$logged_page_info) {
+			$page_type_counts = array();
+			foreach ($this->config->placeholder_config as $config) {
+				$page_type_counts[$config->page_type] = (isset($page_type_counts[$config->page_type]) ? $page_type_counts[$config->page_type] : 0) + 1;
+			}
+
+			$matching_placements = isset($page_type_counts[$page_type]) ? $page_type_counts[$page_type] : 0;
+
+			$placement_selection_enabled = isset($this->config->enable_placement_id_selection) && $this->config->enable_placement_id_selection === true;
+
+			Ezoic_Integration_Logger::console_debug(
+				"Ad Inserter running - Page Type: {$page_type}, Active Placements: {$matching_placements}",
+				'Ad System',
+				'info'
+			);
+			$logged_page_info = true;
+		}
+
+		foreach ($this->config->placeholder_config as $ph_config) {
+			if ($ph_config->page_type != $page_type) {
+				continue;
+			}
+
+			$placeholder = isset($this->config->placeholders[$ph_config->placeholder_id]) ? $this->config->placeholders[$ph_config->placeholder_id] : null;
+			if (!$placeholder) {
+				Ezoic_Integration_Logger::console_debug(
+					"Placement skipped - placeholder not found. Placeholder ID: {$ph_config->placeholder_id}",
+					'Ad System'
+				);
+				continue;
+			}
+
+			$position_type = $placeholder->position_type;
+
+			if (Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder)) {
+				// Only include each placeholder_id once to prevent duplicates
+				if (!isset($rules[$ph_config->placeholder_id])) {
+					$rules[$ph_config->placeholder_id] = $ph_config;
+					Ezoic_Integration_Logger::console_debug(
+						"Position Type `{$position_type}` included for insertion.",
+						'Ad System',
+						'info',
+						$placeholder->position_id
+					);
+				}
+			}
+		}
+
+		// Store the computed rules in the config object for all inserters to use
+		$this->config->filtered_placeholder_rules = $rules;
+	}
+
+	/**
 	 * Register admin hooks (mostly for placeholder initialization)
 	 */
 	public function register_admin_hooks($loader)
@@ -101,7 +168,7 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		$loader->add_filter('the_content', $this, 'set_content_placeholder', PHP_INT_MAX);
 		$loader->add_filter('the_excerpt', $this, 'set_excerpt_placeholder');
-		$loader->add_action('wp', $this, 'set_sidebar_placeholder');
+		$loader->add_action('init', $this, 'set_sidebar_placeholder', 20); // Run after widgets_init (priority 1)
 		$loader->add_action('wp_body_open', $this, 'set_before_content_placeholder');
 		$loader->add_action('wp_footer', $this, 'set_after_content_placeholder');
 
@@ -212,6 +279,9 @@ class Ezoic_AdTester extends Ezoic_Feature
 				}
 			}
 		}
+
+		// Clean up any inactive placeholder configurations
+		$this->config->cleanup_all_inactive_placeholder_configs();
 
 		// Store config
 		$this->update_config();

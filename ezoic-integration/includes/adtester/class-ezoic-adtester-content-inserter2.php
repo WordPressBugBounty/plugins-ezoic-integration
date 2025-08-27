@@ -70,6 +70,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 {
 	private $position_offset = 0;
 	private $paragraphs;
+	private $paragraph_limit_warning_shown = false;
 
 	public function __construct($config)
 	{
@@ -81,6 +82,9 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 	 */
 	public function insert($content)
 	{
+		// Reset paragraph limit warning flag for new content processing
+		$this->paragraph_limit_warning_shown = false;
+
 		// Validation
 		if (!isset($content) || \ez_strlen($content) === 0) {
 			Ezoic_Integration_Logger::console_debug(
@@ -92,7 +96,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		}
 
 		// Find rules that apply to this page
-		$rules = $this->get_filtered_placeholder_rules();
+		$rules = $this->config->filtered_placeholder_rules;
 
 		// Stop processing if there are no rules to process for this page
 		if (\count($rules) === 0) {
@@ -115,6 +119,17 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		foreach ($rules as $rule) {
 			if ($rule->display != 'disabled') {
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
+
+				// Skip if this placeholder already exists in content
+				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - placeholder already exists in content. Placeholder ID: {$rule->placeholder_id}",
+						'Content Ads',
+						'info',
+						$rule->placeholder_id
+					);
+					continue;
+				}
 
 				switch ($rule->display) {
 					case 'before_paragraph':
@@ -156,7 +171,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 			$placement_paragraph = (int) $paragraph_number;
 		} else {
 			Ezoic_Integration_Logger::console_debug(
-				"Position {$placeholder->position_id} failed: Invalid paragraph '{$paragraph_number}' (must be numeric)",
+				"Insertion failed: Invalid paragraph '{$paragraph_number}' (must be numeric)",
 				'Content Ads',
 				'warn',
 				$placeholder->position_id
@@ -166,12 +181,15 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 
 		// If the placement display option is out of bounds, return the content
 		if ($placement_paragraph == -1 || $placement_paragraph > \count($this->paragraphs)) {
-			Ezoic_Integration_Logger::console_debug(
-				"Position {$placeholder->position_id} failed: Paragraph {$placement_paragraph} not found (only " . \count($this->paragraphs) . " available)",
-				'Content Ads',
-				'warn',
-				$placeholder->position_id
-			);
+			// Only show paragraph limit warning once per content processing
+			if (!$this->paragraph_limit_warning_shown) {
+				Ezoic_Integration_Logger::console_debug(
+					"Paragraph {$placement_paragraph} not found (only " . \count($this->paragraphs) . " available). Additional paragraph insertions may also fail.",
+					'Content Ads',
+					'warn'
+				);
+				$this->paragraph_limit_warning_shown = true;
+			}
 			return $content;
 		}
 
@@ -189,7 +207,9 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 
 		// Insert placeholder
 		$original_content_length = strlen($content);
-		$content = \ez_substr_replace($content, $placeholder_markup, $position + $this->position_offset);
+		$insertion_position = $position + $this->position_offset;
+
+		$content = \ez_substr_replace($content, $placeholder_markup, $insertion_position);
 		$this->position_offset += $placeholder_markup_len;
 
 		// Check if insertion actually happened
@@ -197,14 +217,14 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		if ($new_content_length > $original_content_length) {
 			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 			Ezoic_Integration_Logger::console_debug(
-				"Position {$placeholder->position_id} inserted {$mode} paragraph {$placement_paragraph}",
+				"Inserted {$mode} paragraph {$placement_paragraph}",
 				'Content Ads',
 				'info',
 				$placeholder->position_id
 			);
 		} else {
 			Ezoic_Integration_Logger::console_debug(
-				"Position {$placeholder->position_id} failed: Content unchanged (insertion error)",
+				"Failed insertion: Content unchanged (insertion error)",
 				'Content Ads',
 				'warn',
 				$placeholder->position_id
