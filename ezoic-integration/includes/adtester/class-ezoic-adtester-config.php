@@ -34,6 +34,7 @@ class Ezoic_AdTester_Config
 	public $enable_adpos_integration = false;
 	public $enable_placement_id_selection = false;
 	public $active_placements = array(); // Maps position_type => position_id for active placements
+	public $filtered_placeholder_rules = array(); // Cached filtered rules to prevent duplicate computation
 
 	public function __construct()
 	{
@@ -73,6 +74,7 @@ class Ezoic_AdTester_Config
 		$this->enable_adpos_integration			= false;
 		$this->enable_placement_id_selection	= false;
 		$this->active_placements				= array();
+		$this->filtered_placeholder_rules		= array();
 	}
 
 	/**

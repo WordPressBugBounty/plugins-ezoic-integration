@@ -24,59 +24,18 @@ class Ezoic_AdTester extends Ezoic_Feature
 		$this->is_admin_enabled		= true;
 
 		$this->config = Ezoic_AdTester_Config::load();
-
-		// Pre-compute filtered rules once for all inserters to use
-		$this->initialize_filtered_rules();
-
-		$this->conditional_tags['archive'] = 	function () {
-			return \is_archive();
-		};
-		$this->conditional_tags['author'] = 	function () {
-			return \is_author();
-		};
-		$this->conditional_tags['blog'] = 		function () {
-			return \is_front_page() && \is_home();
-		};
-		$this->conditional_tags['category'] = 	function () {
-			return \is_category();
-		};
-		$this->conditional_tags['date'] = 		function () {
-			return \is_date();
-		};
-		$this->conditional_tags['front'] = 		function () {
-			return \is_front_page();
-		};
-		$this->conditional_tags['home'] = 		function () {
-			return \is_home();
-		};
-		$this->conditional_tags['page'] = 		function () {
-			return \is_page();
-		};
-		$this->conditional_tags['post'] = 		function () {
-			return \is_single() || \is_archive();
-		};
-		$this->conditional_tags['search'] = 	function () {
-			return \is_search();
-		};
-		$this->conditional_tags['single'] = 	function () {
-			return \is_single();
-		};
-		$this->conditional_tags['sticky'] = 	function () {
-			return \is_sticky();
-		};
-		$this->conditional_tags['tag'] = 		function () {
-			return \is_tag();
-		};
-		$this->conditional_tags['tax'] = 		function () {
-			return \is_tax();
-		};
 	}
 
 	/**
 	 * Initialize filtered placeholder rules once for all inserters to use
+	 * Only called when needed and after WordPress query is available
 	 */
 	private function initialize_filtered_rules()
 	{
+		// Return early if already initialized
+		if (!empty($this->config->filtered_placeholder_rules)) {
+			return;
+		}
 		// Figure out page type using centralized helper
 		$page_type = Ezoic_AdPos::get_current_page_type();
 
@@ -134,6 +93,69 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 		// Store the computed rules in the config object for all inserters to use
 		$this->config->filtered_placeholder_rules = $rules;
+	}
+
+	/**
+	 * Initialize conditional tags lazily when needed
+	 */
+	private function initialize_conditional_tags()
+	{
+		// Return early if already initialized
+		if (!empty($this->conditional_tags)) {
+			return;
+		}
+
+		$this->conditional_tags['archive'] = 	function () {
+			return \is_archive();
+		};
+		$this->conditional_tags['author'] = 	function () {
+			return \is_author();
+		};
+		$this->conditional_tags['blog'] = 		function () {
+			return \is_front_page() && \is_home();
+		};
+		$this->conditional_tags['category'] = 	function () {
+			return \is_category();
+		};
+		$this->conditional_tags['date'] = 		function () {
+			return \is_date();
+		};
+		$this->conditional_tags['front'] = 		function () {
+			return \is_front_page();
+		};
+		$this->conditional_tags['home'] = 		function () {
+			return \is_home();
+		};
+		$this->conditional_tags['page'] = 		function () {
+			return \is_page();
+		};
+		$this->conditional_tags['post'] = 		function () {
+			return \is_single() || \is_archive();
+		};
+		$this->conditional_tags['search'] = 	function () {
+			return \is_search();
+		};
+		$this->conditional_tags['single'] = 	function () {
+			return \is_single();
+		};
+		$this->conditional_tags['sticky'] = 	function () {
+			return \is_sticky();
+		};
+		$this->conditional_tags['tag'] = 		function () {
+			return \is_tag();
+		};
+		$this->conditional_tags['tax'] = 		function () {
+			return \is_tax();
+		};
+	}
+
+	/**
+	 * Get filtered placeholder rules, initializing them if needed
+	 */
+	public function get_filtered_placeholder_rules()
+	{
+		$this->initialize_filtered_rules();
+		return $this->config->filtered_placeholder_rules;
 	}
 
 	/**
@@ -644,6 +666,9 @@ class Ezoic_AdTester extends Ezoic_Feature
 			return $content;
 		}
 
+		// Initialize filtered rules now that WordPress query is available
+		$this->initialize_filtered_rules();
+
 		// Store original content for fallback
 		$original_content = $content;
 		$this->excerpt_number++;
@@ -687,6 +712,9 @@ class Ezoic_AdTester extends Ezoic_Feature
 		if ($this->should_skip_insertion()) {
 			return $content;
 		}
+
+		// Initialize filtered rules now that WordPress query is available
+		$this->initialize_filtered_rules();
 
 		// Check if content is empty before attempting any insertion
 		if (!isset($content) || strlen($content) === 0) {
@@ -1101,6 +1129,7 @@ class Ezoic_AdTester extends Ezoic_Feature
 
 			if (isset($tag->pageTypes)) {
 				foreach ($tag->pageTypes as $pageType) {
+					$this->initialize_conditional_tags();
 					if (isset($pageType->value) && $this->conditional_tags[$pageType->value]() == true) {
 						echo $tag->insertionText;
 						continue 2;
