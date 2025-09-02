@@ -104,6 +104,10 @@ class Ezoic_Integration_Form_Handler
 			try {
 				$adtester = new Ezoic_AdTester();
 				$adtester->force_generate_placeholders();
+				
+				// Initialize config to ensure active placements are set up
+				// This fetches placeholders from API and sets up active_placements
+				$adtester->initialize_config();
 			} catch (\Exception $e) {
 				Ezoic_Integration_Logger::log_exception($e, 'JS Integration Form Handler');
 			}

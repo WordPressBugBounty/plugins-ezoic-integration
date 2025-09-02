@@ -24,6 +24,13 @@ class Ezoic_AdTester extends Ezoic_Feature
 		$this->is_admin_enabled		= true;
 
 		$this->config = Ezoic_AdTester_Config::load();
+		
+		// Initialize active placements if they're empty
+		// This ensures wp_* placeholders are active even without visiting admin page
+		if (empty($this->config->active_placements) && !empty($this->config->placeholders)) {
+			$this->config->initialize_active_placements();
+			$this->update_config();
+		}
 	}
 
 	/**
