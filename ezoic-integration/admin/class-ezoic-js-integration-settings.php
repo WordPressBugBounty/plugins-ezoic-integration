@@ -86,7 +86,7 @@ class Ezoic_JS_Integration_Settings
 		return array(
 			'js_auto_insert_scripts' => 1,
 			'js_enable_privacy_scripts' => 1,
-			'js_use_wp_placeholders' => 0
+			'js_use_wp_placeholders' => 1
 		);
 	}
 
@@ -151,7 +151,7 @@ class Ezoic_JS_Integration_Settings
 	public function js_use_wp_placeholders_callback($args)
 	{
 		$options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
-		$value = isset($options['js_use_wp_placeholders']) ? $options['js_use_wp_placeholders'] : 0;
+		$value = isset($options['js_use_wp_placeholders']) ? $options['js_use_wp_placeholders'] : 1;
 
 		$html = '<input type="checkbox" id="js_use_wp_placeholders" name="ezoic_js_integration_options[js_use_wp_placeholders]" value="1"' . checked(1, $value, false) . '/>';
 		$html .= '<label for="js_use_wp_placeholders">' . __('Use WordPress-generated ad placeholders', 'ezoic') . '</label>';
@@ -343,7 +343,7 @@ class Ezoic_JS_Integration_Settings
 			$plugin_cmp_found = strpos($contents, 'id="ezoic-wp-plugin-cmp"') !== false;
 			$plugin_gatekeeper_found = strpos($contents, 'id="ezoic-wp-plugin-gatekeeper"') !== false;
 			$plugin_privacy_scripts_found = $plugin_cmp_found && $plugin_gatekeeper_found;
-			
+
 			if ($plugin_privacy_scripts_found) {
 				// Both plugin scripts found - check if there are additional scripts
 				$privacy_duplicate = $total_privacy_scripts > 2;  // More than the 2 plugin scripts
