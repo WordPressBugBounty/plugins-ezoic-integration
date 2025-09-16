@@ -83,7 +83,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 			return;
 		}
 
-		self::RemoveHTACCESSFile();
+		$this->RemoveHTACCESSFile();
 
 		$adstxtmanager_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
 

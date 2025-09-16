@@ -55,6 +55,7 @@ class Ezoic_Integration_Renderer
 	{
 		$atm_warning = $context['atm_warning']['warning'];
 		$cdn_warning = $context['cdn_warning'];
+		$js_integration_warning = $context['js_integration_warning'];
 ?>
 		<div class="wrap" id="ez_integration">
 			<?php
@@ -82,7 +83,7 @@ class Ezoic_Integration_Renderer
 
 			<p><img src="<?php echo plugins_url('/admin/img', EZOIC__PLUGIN_FILE); ?>/ezoic-logo.png" width="190" height="40" alt="Ezoic" /></p>
 
-			<?php $this->render_tab_navigation($active_tab, $atm_warning, $cdn_warning); ?>
+			<?php $this->render_tab_navigation($active_tab, $atm_warning, $cdn_warning, $js_integration_warning); ?>
 
 			<form method="post" action="options.php" id="ezoic_settings">
 				<?php $this->render_tab_content($active_tab); ?>
@@ -101,15 +102,16 @@ class Ezoic_Integration_Renderer
 	 * @param string $active_tab The active tab
 	 * @param string $atm_warning ATM warning indicator
 	 * @param string $cdn_warning CDN warning indicator
+	 * @param string $js_integration_warning JS integration warning indicator
 	 */
-	private function render_tab_navigation($active_tab, $atm_warning, $cdn_warning)
+	private function render_tab_navigation($active_tab, $atm_warning, $cdn_warning, $js_integration_warning)
 	{
 	?>
 		<h2 class="nav-tab-wrapper">
 			<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=integration_status"
 				class="nav-tab <?php echo $active_tab == 'integration_status' ? 'nav-tab-active' : ''; ?>"><?php _e('Dashboard', 'ezoic'); ?></a>
 			<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=js_integration"
-				class="nav-tab <?php echo $active_tab == 'js_integration' ? 'nav-tab-active' : ''; ?>"><?php _e('Integration', 'ezoic'); ?></a>
+				class="nav-tab <?php echo $active_tab == 'js_integration' ? 'nav-tab-active' : ''; ?>"><?php _e('Integration', 'ezoic'); ?> <?php echo $js_integration_warning; ?></a>
 			<?php if (Ezoic_AdsTxtManager::ezoic_should_show_adstxtmanager_setting()) { ?>
 				<a href="?page=<?php echo EZOIC__PLUGIN_SLUG; ?>&tab=adstxtmanager_settings"
 					class="nav-tab <?php echo $active_tab == 'adstxtmanager_settings' ? 'nav-tab-active' : ''; ?>"><?php
@@ -188,6 +190,9 @@ class Ezoic_Integration_Renderer
 
 		echo '<hr/>';
 		$this->display_notice($options);
+
+		// Display duplicate script warning if detected
+		$this->display_duplicate_script_warning();
 
 		if (isset($_GET['create_default']) && $_GET['create_default']) {
 			// $init = new Ezoic_AdTester_Init();
@@ -685,5 +690,44 @@ class Ezoic_Integration_Renderer
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Display warning for duplicate Ezoic scripts
+	 */
+	private function display_duplicate_script_warning()
+	{
+		// Only show warning if JS integration is enabled
+		if (!get_option('ezoic_js_integration_enabled', false)) {
+			return;
+		}
+
+		$js_options = get_option('ezoic_js_integration_options', array());
+		$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
+		$privacy_enabled = isset($js_options['js_enable_privacy_scripts']) ? $js_options['js_enable_privacy_scripts'] : 1;
+
+		// Check for duplicate scripts
+		$duplicate_scripts = $this->js_integration_settings->get_all_duplicate_scripts();
+		$warnings = array();
+
+		if ($auto_insert_enabled && $duplicate_scripts['sa']) {
+			$warnings[] = __('Ezoic ad scripts (sa.min.js)', 'ezoic');
+		}
+		if ($privacy_enabled && $duplicate_scripts['privacy']) {
+			$warnings[] = __('Ezoic CMP/privacy scripts', 'ezoic');
+		}
+
+		if (!empty($warnings)) {
+			echo '<div class="notice notice-warning" style="margin: 20px 0; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107;">';
+			echo '<h4 style="margin-top: 0; color: #856404;"><span class="dashicons dashicons-warning" style="vertical-align: middle; margin-right: 5px;"></span>' . __('Duplicate Ezoic Scripts Detected', 'ezoic') . '</h4>';
+			echo '<p>' . sprintf(__('The following duplicate scripts are detected on your site: %s. Having duplicate scripts can cause conflicts and performance issues.', 'ezoic'), '<strong>' . implode(', ', $warnings) . '</strong>') . '</p>';
+			echo '<p><strong>' . __('Recommended Actions:', 'ezoic') . '</strong></p>';
+			echo '<ul style="margin-left: 20px; list-style: disc;">';
+			echo '<li>' . sprintf(__('Go to the <a href="%s">Integration settings</a> and disable the relevant script options', 'ezoic'), admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration')) . '</li>';
+			echo '<li>' . __('Remove existing Ezoic scripts from your theme or other plugins', 'ezoic') . '</li>';
+			echo '<li>' . __('Re-enable the script options once other scripts are removed', 'ezoic') . '</li>';
+			echo '</ul>';
+			echo '</div>';
+		}
 	}
 }

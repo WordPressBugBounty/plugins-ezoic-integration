@@ -735,7 +735,7 @@ class Ezoic_Integration_Ad_Settings
 					$configArray = array();
 					if (!empty($this->adtester->config->placeholder_config)) {
 						foreach ($this->adtester->config->placeholder_config as $config) {
-							$configArray[] = '{"pageType":"' . $config->page_type . '","placeholderId":' . $config->placeholder_id . ',"display":"' . $config->display . '","displayOption":"' . $config->display_option . '"}';
+							$configArray[] = '{"pageType":"' . $config->page_type . '","placeholderId":' . $config->placeholder_id . ',"display":"' . $config->display . '","displayOption":"' . addslashes($config->display_option) . '"}';
 						}
 
 						echo implode(',', $configArray);

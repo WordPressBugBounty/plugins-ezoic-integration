@@ -81,14 +81,24 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 			$file_path = ABSPATH . '/wp-admin/includes/file.php';
 			if (file_exists($file_path)) {
 				require_once $file_path;
-				WP_Filesystem();
-			} else {
-				// Handle error, file not found
+
+				// Try to initialize with 'direct' method first to avoid FTP issues
+				$filesystem_result = WP_Filesystem('direct');
+
+				// If direct method fails, try default method
+				if (!$filesystem_result && empty($wp_filesystem)) {
+					WP_Filesystem();
+				}
+
+				// Log if filesystem still failed to initialize
+				if (empty($wp_filesystem)) {
+					Ezoic_Integration_Logger::log_debug("WordPress filesystem failed to initialize", 'AdsTxtManager');
+				}
 			}
 		}
 
-		$this->wp_filesystem = $wp_filesystem;
-		return $this->wp_filesystem;
+		// Return true/false based on filesystem initialization success
+		return !empty($wp_filesystem);
 	}
 
 	public function ezoic_handle_adstxt($wp)

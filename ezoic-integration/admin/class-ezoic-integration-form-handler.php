@@ -81,6 +81,9 @@ class Ezoic_Integration_Form_Handler
 			// Enable JavaScript integration
 			update_option('ezoic_js_integration_enabled', true);
 
+			// Clear duplicate script detection cache when JS integration is enabled
+			delete_transient('ezoic_duplicate_scripts_check');
+
 			// Send plugin data to notify backend of integration change
 			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
 
@@ -304,6 +307,9 @@ class Ezoic_Integration_Form_Handler
 			if ($settings['disable_wp_integration'] == 0 && $old_options['disable_wp_integration'] == 1) {
 				// Disable JavaScript integration when WP integration is enabled
 				update_option('ezoic_js_integration_enabled', false);
+				
+				// Clear duplicate script detection cache when JS integration is disabled
+				delete_transient('ezoic_duplicate_scripts_check');
 			}
 		}
 

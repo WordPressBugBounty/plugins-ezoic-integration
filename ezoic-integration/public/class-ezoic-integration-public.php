@@ -410,8 +410,8 @@ class Ezoic_Integration_Public
 		}
 
 		// Privacy/CMP scripts (must load first)
-		echo '<script src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
-		echo '<script src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
 	}
 
 	/**

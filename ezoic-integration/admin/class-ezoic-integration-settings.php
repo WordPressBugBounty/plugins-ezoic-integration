@@ -80,6 +80,26 @@ class Ezoic_Integration_Admin_Settings
 			}
 		}
 
+		// Add duplicate script detection to badge count if JS integration is enabled and scripts are auto-inserted
+		// Uses cached results to avoid unnecessary HTTP requests
+		if (get_option('ezoic_js_integration_enabled', false)) {
+			$js_options = get_option('ezoic_js_integration_options', array());
+			$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
+			$privacy_enabled = isset($js_options['js_enable_privacy_scripts']) ? $js_options['js_enable_privacy_scripts'] : 1;
+			
+			$duplicate_scripts = $this->js_integration_settings->get_all_duplicate_scripts();
+			
+			// Check for SA script duplicates if auto-insert is enabled
+			if ($auto_insert_enabled && $duplicate_scripts['sa']) {
+				$badge_count++;
+			}
+			
+			// Check for privacy script duplicates if privacy scripts are enabled
+			if ($privacy_enabled && $duplicate_scripts['privacy']) {
+				$badge_count++;
+			}
+		}
+
 		$incompatible_count   = '';
 		if ($badge_count > 0) {
 			$incompatible_count = ' <span class="awaiting-mod">' . $badge_count . '</span>';

@@ -23,6 +23,7 @@ class Ezoic_Settings_Helpers
 		return array(
 			'cdn_warning' => $this->get_cdn_warning(),
 			'atm_warning' => $this->get_atm_warning(),
+			'js_integration_warning' => $this->get_js_integration_warning(),
 			'atm_status' => Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true),
 			'atm_detection_result' => null // Will be set by get_atm_warning if needed
 		);
@@ -102,6 +103,49 @@ class Ezoic_Settings_Helpers
 	}
 
 	/**
+	 * Generate JS integration warning indicator for duplicate scripts
+	 * Uses cached results to avoid unnecessary HTTP requests
+	 *
+	 * @return string HTML warning indicator or empty string
+	 */
+	public function get_js_integration_warning()
+	{
+		$js_warning = "";
+
+		// Only check if JS integration is enabled
+		if (!get_option('ezoic_js_integration_enabled', false)) {
+			return $js_warning;
+		}
+
+		$js_options = get_option('ezoic_js_integration_options', array());
+		$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
+		$privacy_enabled = isset($js_options['js_enable_privacy_scripts']) ? $js_options['js_enable_privacy_scripts'] : 1;
+
+		// Check for duplicate scripts using cached results
+		// This will only make HTTP requests on plugin pages and cache the results
+		$js_integration_settings = new Ezoic_JS_Integration_Settings();
+		$duplicate_scripts = $js_integration_settings->get_all_duplicate_scripts();
+
+		$has_warnings = false;
+
+		// Check SA scripts if auto-insert is enabled
+		if ($auto_insert_enabled && $duplicate_scripts['sa']) {
+			$has_warnings = true;
+		}
+
+		// Check privacy scripts if privacy scripts are enabled
+		if ($privacy_enabled && $duplicate_scripts['privacy']) {
+			$has_warnings = true;
+		}
+
+		if ($has_warnings) {
+			$js_warning = "<span class='dashicons dashicons-warning ez_warning'></span>";
+		}
+
+		return $js_warning;
+	}
+
+	/**
 	 * Get active incompatible plugins for compatibility warnings
 	 *
 	 * @return array Array of incompatible plugins with hosting issues flag
@@ -116,7 +160,7 @@ class Ezoic_Settings_Helpers
 		$options = get_option('ezoic_integration_status');
 		/** @phpstan-ignore-next-line */
 		if (function_exists('is_wpe')) {
-			if (is_wpe() && (isset($options['integration_type']) && $options['integration_type'] == "wp")) {
+			if (\is_wpe() && (isset($options['integration_type']) && $options['integration_type'] == "wp")) {
 				$hosting_issue = true;
 			}
 		}

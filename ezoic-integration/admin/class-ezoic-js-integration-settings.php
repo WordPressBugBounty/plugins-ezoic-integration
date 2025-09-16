@@ -111,11 +111,11 @@ class Ezoic_JS_Integration_Settings
 		$html .= '<label for="js_auto_insert_scripts">' . __('Automatically insert Ezoic scripts into your pages', 'ezoic') . '</label>';
 		$html .= '<p class="description">' . __('Essential JavaScript files that initialize the Ezoic ad system.', 'ezoic') . '</p>';
 
-		// Check if sa.min.js is already detected on the site
+		// Check if SA scripts are already detected on the site (only show SA script warnings for this setting)
 		if ($value && $this->is_sa_script_detected()) {
 			$html .= '<div class="notice notice-warning inline" style="margin: 10px 0; padding: 8px 12px;">';
 			$html .= '<p style="margin: 0;"><strong>' . __('Warning:', 'ezoic') . '</strong> ';
-			$html .= __('Ezoic scripts are already detected on your site. Please remove existing scripts before enabling auto-insert.', 'ezoic');
+			$html .= __('Ezoic ad scripts (sa.min.js) are already detected on your site. Please remove existing ad scripts before enabling auto-insert.', 'ezoic');
 			$html .= '</p></div>';
 		}
 
@@ -133,6 +133,14 @@ class Ezoic_JS_Integration_Settings
 		$html = '<input type="checkbox" id="js_enable_privacy_scripts" name="ezoic_js_integration_options[js_enable_privacy_scripts]" value="1"' . checked(1, $value, false) . '/>';
 		$html .= '<label for="js_enable_privacy_scripts">' . __('Enable privacy compliance scripts', 'ezoic') . '</label>';
 		$html .= '<p class="description">' . __('The privacy scripts handle user consent management and ensure compliance with privacy regulations.', 'ezoic') . '</p>';
+
+		// Check if privacy/CMP scripts are already detected on the site
+		if ($value && $this->is_privacy_script_detected()) {
+			$html .= '<div class="notice notice-warning inline" style="margin: 10px 0; padding: 8px 12px;">';
+			$html .= '<p style="margin: 0;"><strong>' . __('Warning:', 'ezoic') . '</strong> ';
+			$html .= __('Ezoic CMP/privacy scripts are already detected on your site. Please remove existing CMP scripts before enabling privacy scripts.', 'ezoic');
+			$html .= '</p></div>';
+		}
 
 		echo $html;
 	}
@@ -168,6 +176,9 @@ class Ezoic_JS_Integration_Settings
 
 			// Disable JavaScript integration
 			update_option('ezoic_js_integration_enabled', false);
+
+			// Clear duplicate script detection cache when JS integration is disabled
+			delete_transient('ezoic_duplicate_scripts_check');
 
 			// Send plugin data to notify backend of integration change
 			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
@@ -233,14 +244,60 @@ class Ezoic_JS_Integration_Settings
 			$options = get_option('ezoic_integration_status');
 			$options['check_time'] = '';
 			update_option('ezoic_integration_status', $options);
+
+			// Clear duplicate script detection cache when settings change
+			delete_transient('ezoic_duplicate_scripts_check');
 		}
 
 		return $sanitized;
 	}
+
 	/**
-	 * Check if sa.min.js script is already loaded on the site
+	 * Check if sa.min.js script is already loaded on the site (cached version)
+	 *
+	 * @param bool $force_check Force a fresh check, bypassing cache
+	 * @return bool True if duplicate scripts detected, false otherwise
 	 */
-	public function is_sa_script_detected()
+	public function is_sa_script_detected($force_check = false)
+	{
+		$all_scripts = $this->get_all_duplicate_scripts($force_check);
+		return $all_scripts['sa'];
+	}
+
+	/**
+	 * Determine if we should check for duplicate scripts
+	 * Only check on plugin pages to avoid unnecessary HTTP requests
+	 *
+	 * @return bool True if should check, false otherwise
+	 */
+	private function should_check_duplicate_scripts()
+	{
+		// Only check in admin area
+		if (!is_admin()) {
+			return false;
+		}
+
+		// Check if we're on the plugin settings page
+		$current_page = isset($_GET['page']) ? $_GET['page'] : '';
+		if ($current_page === EZOIC__PLUGIN_SLUG) {
+			return true;
+		}
+
+		// Also check if we're saving JS integration settings
+		if (isset($_POST['option_page']) && $_POST['option_page'] === 'ezoic_js_integration_options') {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Perform the actual duplicate script detection for both SA and privacy scripts
+	 * Makes a single HTTP request to check for all script types
+	 *
+	 * @return array Array with 'sa' and 'privacy' boolean values
+	 */
+	private function perform_duplicate_scripts_check()
 	{
 		// Get the site's homepage content
 		$url = home_url('/');
@@ -250,25 +307,101 @@ class Ezoic_JS_Integration_Settings
 		));
 
 		if (is_wp_error($response)) {
-			return false;
+			return array('sa' => false, 'privacy' => false);
 		}
 
 		$contents = wp_remote_retrieve_body($response);
 		if (empty($contents)) {
-			return false;
+			return array('sa' => false, 'privacy' => false);
 		}
 
+		// Check for SA scripts
+		$sa_duplicate = false;
 		$script_count = substr_count($contents, 'ezojs.com/ezoic/sa.min.js');
-		if ($script_count === 0) {
-			return false;
+		if ($script_count > 0) {
+			$plugin_script_found = strpos($contents, 'id="ezoic-wp-plugin-js"') !== false;
+			if ($plugin_script_found) {
+				$sa_duplicate = $script_count > 1;  // Duplicates detected
+			} else {
+				$sa_duplicate = true; // External scripts detected
+			}
 		}
 
-		$plugin_script_found = strpos($contents, 'id="ezoic-wp-plugin-js"') !== false;
-		if ($plugin_script_found) {
-			return $script_count > 1;  // Duplicates detected
+		// Check for privacy/CMP scripts
+		$privacy_duplicate = false;
+		$privacy_patterns = array(
+			'cmp.gatekeeperconsent.com/min.js',
+			'the.gatekeeperconsent.com/cmp.min.js'
+		);
+
+		$total_privacy_scripts = 0;
+		foreach ($privacy_patterns as $pattern) {
+			$total_privacy_scripts += substr_count($contents, $pattern);
 		}
 
-		return true;
+		if ($total_privacy_scripts > 0) {
+			$plugin_cmp_found = strpos($contents, 'id="ezoic-wp-plugin-cmp"') !== false;
+			$plugin_gatekeeper_found = strpos($contents, 'id="ezoic-wp-plugin-gatekeeper"') !== false;
+			$plugin_privacy_scripts_found = $plugin_cmp_found && $plugin_gatekeeper_found;
+			
+			if ($plugin_privacy_scripts_found) {
+				// Both plugin scripts found - check if there are additional scripts
+				$privacy_duplicate = $total_privacy_scripts > 2;  // More than the 2 plugin scripts
+			} else {
+				$privacy_duplicate = true; // External scripts detected or incomplete plugin scripts
+			}
+		}
+
+		return array(
+			'sa' => $sa_duplicate,
+			'privacy' => $privacy_duplicate
+		);
+	}
+
+	/**
+	 * Check if privacy/CMP scripts are already loaded on the site (cached version)
+	 *
+	 * @param bool $force_check Force a fresh check, bypassing cache
+	 * @return bool True if duplicate privacy scripts detected, false otherwise
+	 */
+	public function is_privacy_script_detected($force_check = false)
+	{
+		$all_scripts = $this->get_all_duplicate_scripts($force_check);
+		return $all_scripts['privacy'];
+	}
+
+
+	/**
+	 * Check if any duplicate scripts (SA or privacy) are detected
+	 *
+	 * @param bool $force_check Force a fresh check, bypassing cache
+	 * @return array Array with 'sa' and 'privacy' boolean values
+	 */
+	public function get_all_duplicate_scripts($force_check = false)
+	{
+		// Check if we should perform the detection (only on plugin pages)
+		if (!$force_check && !$this->should_check_duplicate_scripts()) {
+			// Return cached result or default if no cache
+			$cached_result = get_transient('ezoic_duplicate_scripts_check');
+			return $cached_result !== false ? $cached_result : array('sa' => false, 'privacy' => false);
+		}
+
+		// Perform the actual check with single HTTP request
+		$result = $this->perform_duplicate_scripts_check();
+
+		// Cache the result for 1 hour
+		set_transient('ezoic_duplicate_scripts_check', $result, HOUR_IN_SECONDS);
+
+		return $result;
+	}
+
+	/**
+	 * Clear duplicate script detection cache for all script types
+	 * Useful for forcing a fresh check
+	 */
+	public function clear_duplicate_script_cache()
+	{
+		delete_transient('ezoic_duplicate_scripts_check');
 	}
 
 	/**

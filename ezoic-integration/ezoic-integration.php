@@ -18,7 +18,7 @@ namespace Ezoic_Namespace;
  * Plugin Name:       Ezoic
  * Plugin URI:        https://ezoic.com/
  * Description:       Easily integrate and connect with Ezoic using WordPress. In order to activate this plugin properly you will need an Ezoic account. You can create an account here: https://pubdash.ezoic.com/join
- * Version:           2.19.3
+ * Version:           2.19.4
  * Author:            Ezoic Inc.
  * Author URI:        https://ezoic.com/
  * License:           GPL-2.0+
@@ -37,7 +37,7 @@ if (! defined('WPINC')) {
  */
 
 if (! defined('EZOIC_INTEGRATION_VERSION')) {
-	define('EZOIC_INTEGRATION_VERSION', '2.19.3'); // also update version in 'class-ezoic-integration-factory.php'.
+	define('EZOIC_INTEGRATION_VERSION', '2.19.4'); // also update version in 'class-ezoic-integration-factory.php'.
 }
 define('EZOIC__PLUGIN_NAME', 'Ezoic');
 define('EZOIC__PLUGIN_SLUG', dirname(plugin_basename(__FILE__)));
