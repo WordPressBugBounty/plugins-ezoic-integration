@@ -24,7 +24,7 @@ class Ezoic_AdTester extends Ezoic_Feature
 		$this->is_admin_enabled		= true;
 
 		$this->config = Ezoic_AdTester_Config::load();
-		
+
 		// Initialize active placements if they're empty
 		// This ensures wp_* placeholders are active even without visiting admin page
 		if (empty($this->config->active_placements) && !empty($this->config->placeholders)) {
@@ -712,7 +712,19 @@ class Ezoic_AdTester extends Ezoic_Feature
 	 */
 	public function set_content_placeholder($content)
 	{
-		if (!(\in_the_loop() && \is_main_query())) {
+		$in_loop = \in_the_loop();
+		$is_main = \is_main_query();
+		$is_singular = \is_singular();
+		$is_frontend = !is_admin() && !is_feed() && !wp_doing_ajax();
+
+		$should_insert = false;
+		if ($in_loop && $is_main) {
+			$should_insert = true;
+		} elseif ($is_frontend && $is_singular) {
+			$should_insert = true;
+		}
+
+		if (!$should_insert) {
 			return $content;
 		}
 

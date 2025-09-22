@@ -49,7 +49,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 
 		// Safely check if file exists with error handling
 		try {
-			$file_exists = $wp_filesystem->exists($filePath);
+			$file_exists = @$wp_filesystem->exists($filePath);
 		} catch (\Exception $e) {
 			$redirect_result = array('status' => false, 'error' => 'filesystem_error', 'message' => 'Error accessing ads.txt file: ' . $e->getMessage() . '. Please check your server configuration or contact your hosting provider.');
 			update_option('ezoic_adstxtmanager_status', $redirect_result);
@@ -74,10 +74,10 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 
 			// Try to rename existing ads.txt file to allow redirect to work
 			try {
-				$renameSuccess = $wp_filesystem->move($filePath, $newFilePath);
+				$renameSuccess = @$wp_filesystem->move($filePath, $newFilePath);
 				if ($renameSuccess == false) {
-					$is_writable = $wp_filesystem->is_writable($filePath);
-					$dir_writable = $wp_filesystem->is_writable(dirname($filePath));
+					$is_writable = @$wp_filesystem->is_writable($filePath);
+					$dir_writable = @$wp_filesystem->is_writable(dirname($filePath));
 				}
 			} catch (\Exception $e) {
 				$renameSuccess = false;
@@ -134,7 +134,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 
 		// Safely check if file exists with error handling
 		try {
-			$file_exists = $wp_filesystem->exists($modifiedFilePath);
+			$file_exists = @$wp_filesystem->exists($modifiedFilePath);
 		} catch (\Exception $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error during ads.txt teardown: " . $e->getMessage(), 'AdsTxtManager');
 			return;
@@ -145,7 +145,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 		}
 
 		try {
-			$renameSuccess = $wp_filesystem->move($modifiedFilePath, $origFilePath);
+			$renameSuccess = @$wp_filesystem->move($modifiedFilePath, $origFilePath);
 		} catch (\Exception $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error moving ads.txt file: " . $e->getMessage(), 'AdsTxtManager');
 			return;

@@ -444,7 +444,7 @@ class Ezoic_Integration_Ad_Settings
 			$config->initialize_active_placements(false);
 		}
 
-		if ($payload->excludeWordCount !== '' && \is_numeric($payload->excludeWordCount)) {
+		if ($payload->excludeWordCount !== '' && \is_numeric($payload->excludeWordCount) && $payload->excludeWordCount >= 0) {
 			$config->skip_word_count = $payload->excludeWordCount;
 		}
 

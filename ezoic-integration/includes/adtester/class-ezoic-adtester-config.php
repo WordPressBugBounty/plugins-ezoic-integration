@@ -140,6 +140,11 @@ class Ezoic_AdTester_Config
 			$this->skip_word_count = \intval($this->skip_word_count);
 		}
 
+		// Ensure skip_word_count is never negative
+		if ($this->skip_word_count < 0) {
+			$this->skip_word_count = 10; // Reset to default value
+		}
+
 		$payload = json_encode($this);
 		$requestArgs = array(
 			'method' => 'POST',

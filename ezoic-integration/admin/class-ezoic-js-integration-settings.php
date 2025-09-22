@@ -239,6 +239,17 @@ class Ezoic_JS_Integration_Settings
 			}
 		}
 
+		// If JS integration is enabled with WP placeholders, disable Placement Service Integration
+		if (get_option('ezoic_js_integration_enabled', false) && $sanitized['js_use_wp_placeholders']) {
+			try {
+				$adtester = new Ezoic_AdTester();
+				$adtester->config->enable_adpos_integration = false;
+				Ezoic_AdTester_Config::store($adtester->config);
+			} catch (\Exception $e) {
+				Ezoic_Integration_Logger::log_exception($e, 'JS Integration Settings - AdPos Disable');
+			}
+		}
+
 		// Trigger integration recheck if any settings changed
 		if ($sanitized !== $current_options) {
 			$options = get_option('ezoic_integration_status');

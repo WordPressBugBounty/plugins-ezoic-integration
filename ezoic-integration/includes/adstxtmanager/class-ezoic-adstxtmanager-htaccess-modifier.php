@@ -64,9 +64,9 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 
 		// Safely check file operations with error handling
 		try {
-			$file_exists = $wp_filesystem->exists($filePath);
-			$file_readable = $file_exists ? $wp_filesystem->is_readable($filePath) : false;
-			$file_writable = $file_exists ? $wp_filesystem->is_writable($filePath) : false;
+			$file_exists = @$wp_filesystem->exists($filePath);
+			$file_readable = $file_exists ? @$wp_filesystem->is_readable($filePath) : false;
+			$file_writable = $file_exists ? @$wp_filesystem->is_writable($filePath) : false;
 		} catch (\Exception $e) {
 			$message = "Error accessing .htaccess file: " . $e->getMessage() . ". Please check your server configuration or contact your hosting provider.";
 			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
@@ -111,7 +111,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 		}
 
 		try {
-			$content = $wp_filesystem->get_contents($filePath);
+			$content = @$wp_filesystem->get_contents($filePath);
 		} catch (\Exception $e) {
 			$message = "Error reading .htaccess file: " . $e->getMessage() . ". Please check your server configuration or contact your hosting provider.";
 			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
@@ -142,7 +142,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 		$modifiedContent = $atmFinalContent . "\n" . $content;
 
 		try {
-			$success = $wp_filesystem->put_contents($filePath, $modifiedContent);
+			$success = @$wp_filesystem->put_contents($filePath, $modifiedContent);
 			@clearstatcache();
 
 			if (!$success) {
@@ -174,10 +174,16 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 
 		$filePath = $rootPath . ".htaccess";
 
-		// Safely check file operations with error handling
+		// Safely check file operations with error handling (PHP 5.6+ compatible)
 		try {
-			$file_exists = $wp_filesystem->exists($filePath);
-			$file_writable = $file_exists ? $wp_filesystem->is_writable($filePath) : false;
+			// Use error suppression to prevent fatal errors from FTP issues
+			$file_exists = @$wp_filesystem->exists($filePath);
+			$file_writable = $file_exists ? @$wp_filesystem->is_writable($filePath) : false;
+			
+			// If operations returned null/false unexpectedly, treat as failure
+			if ($file_exists === null) {
+				$file_exists = false;
+			}
 		} catch (\Exception $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error during .htaccess cleanup: " . $e->getMessage(), 'AdsTxtManager');
 			return;
@@ -188,7 +194,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 		}
 
 		try {
-			$content = $wp_filesystem->get_contents($filePath);
+			$content = @$wp_filesystem->get_contents($filePath);
 		} catch (\Exception $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error reading .htaccess during cleanup: " . $e->getMessage(), 'AdsTxtManager');
 			return;
@@ -220,7 +226,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 		$modifiedContent = implode("\n", $lineContent);
 
 		try {
-			$success = $wp_filesystem->put_contents($filePath, $modifiedContent);
+			$success = @$wp_filesystem->put_contents($filePath, $modifiedContent);
 			if (!$success) {
 				Ezoic_Integration_Logger::log_error("Failed to write modified .htaccess file", 'AdsTxtManager');
 			}
