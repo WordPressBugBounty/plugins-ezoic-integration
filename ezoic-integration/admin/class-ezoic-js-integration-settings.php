@@ -71,7 +71,6 @@ class Ezoic_JS_Integration_Settings
 			'ezoic_js_integration_options',
 			'ezoic_js_integration_options',
 			array(
-				'default' => $this->default_js_integration_options(),
 				'type' => 'array',
 				'sanitize_callback' => array($this, 'sanitize_js_integration_options')
 			)
@@ -440,20 +439,17 @@ class Ezoic_JS_Integration_Settings
 			echo '</div>';
 		}
 
+		// Always check if site is cloud integrated and show warning
+		if (Ezoic_Integration_Admin::is_cloud_integrated()) {
+			Ezoic_Integration_Renderer::display_cloud_integration_warning();
+		}
+
 		// Only show settings if JS integration is enabled
 		if (get_option('ezoic_js_integration_enabled', false)) {
 			settings_fields('ezoic_js_integration_options');
 			do_settings_sections('ezoic_js_integration_options');
 			submit_button('Save Settings');
 		} else {
-			// Check if site is cloud integrated and show warning
-			if (Ezoic_Integration_Admin::is_cloud_integrated()) {
-				echo '<div class="notice notice-warning" style="margin: 20px 0; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107;">';
-				echo '<h4 style="margin-top: 0; color: #856404;"><span class="dashicons dashicons-warning" style="vertical-align: middle; margin-right: 5px;"></span>' . __('Cloud Integration Active', 'ezoic') . '</h4>';
-				echo '<p>' . __('Your site is using Ezoic Cloud Integration, which already handles script delivery. Enabling JavaScript Integration may cause conflicts.', 'ezoic') . '</p>';
-				echo '</div>';
-			}
-
 			// Just show the turn on button directly, don't call do_settings_sections
 			echo '<h3>' . __('JavaScript Integration Settings', 'ezoic') . '</h3>';
 			echo '<p>' . __('JavaScript integration is currently disabled. Enable it to configure advanced settings for your Ezoic ads.', 'ezoic') . '</p><hr/><br/>';

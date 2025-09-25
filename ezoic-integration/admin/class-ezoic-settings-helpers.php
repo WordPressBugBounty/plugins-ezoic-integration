@@ -111,8 +111,19 @@ class Ezoic_Settings_Helpers
 	public function get_js_integration_warning()
 	{
 		$js_warning = "";
+		$has_warnings = false;
 
-		// Only check if JS integration is enabled
+		// Check for Cloud Integration conflict
+		if (Ezoic_Integration_Admin::is_cloud_integrated()) {
+			$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
+			if ($js_integration_enabled) {
+				// High priority: both integrations active - use error icon
+				$js_warning = "<span class='dashicons dashicons-warning ez_error'></span>";
+				return $js_warning;
+			}
+		}
+
+		// Only check duplicate scripts if JS integration is enabled
 		if (!get_option('ezoic_js_integration_enabled', false)) {
 			return $js_warning;
 		}
@@ -125,8 +136,6 @@ class Ezoic_Settings_Helpers
 		// This will only make HTTP requests on plugin pages and cache the results
 		$js_integration_settings = new Ezoic_JS_Integration_Settings();
 		$duplicate_scripts = $js_integration_settings->get_all_duplicate_scripts();
-
-		$has_warnings = false;
 
 		// Check SA scripts if auto-insert is enabled
 		if ($auto_insert_enabled && $duplicate_scripts['sa']) {

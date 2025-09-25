@@ -86,16 +86,25 @@ class Ezoic_Integration_Admin_Settings
 			$js_options = get_option('ezoic_js_integration_options', array());
 			$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
 			$privacy_enabled = isset($js_options['js_enable_privacy_scripts']) ? $js_options['js_enable_privacy_scripts'] : 1;
-			
+
 			$duplicate_scripts = $this->js_integration_settings->get_all_duplicate_scripts();
-			
+
 			// Check for SA script duplicates if auto-insert is enabled
 			if ($auto_insert_enabled && $duplicate_scripts['sa']) {
 				$badge_count++;
 			}
-			
+
 			// Check for privacy script duplicates if privacy scripts are enabled
 			if ($privacy_enabled && $duplicate_scripts['privacy']) {
+				$badge_count++;
+			}
+		}
+
+		// Check for Cloud Integration conflicts
+		if (Ezoic_Integration_Admin::is_cloud_integrated()) {
+			$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
+			if ($js_integration_enabled) {
+				// Both integrations active - count as issue
 				$badge_count++;
 			}
 		}

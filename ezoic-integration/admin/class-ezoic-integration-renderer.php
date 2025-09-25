@@ -233,11 +233,24 @@ class Ezoic_Integration_Renderer
 
 		if ($options['is_integrated']) {
 			if (Ezoic_Integration_Admin::is_cloud_integrated()) {
-				// cloud
-				$html .= '<div style="display: flex; align-items: center; padding: 12px 0;">';
-				$html .= '<span class="dashicons dashicons-cloud-saved text-success" style=" font-size: 20px; margin-right: 8px;"></span>';
-				$html .= '<span class="text-success" style="font-weight: 600; font-size: 14px;">Cloud Integrated</span>';
-				$html .= '</div>';
+				// Check if JS integration is also enabled (conflict)
+				$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
+
+				if ($js_integration_enabled) {
+					// Show warning for conflict
+					$html .= '<div style="display: flex; align-items: center; padding: 12px 0; margin-bottom: 8px;">';
+					$html .= '<span class="dashicons dashicons-cloud-saved text-success" style=" font-size: 20px; margin-right: 8px;"></span>';
+					$html .= '<span class="text-success" style="font-weight: 600; font-size: 14px;">Cloud Integrated</span>';
+					$html .= '<span class="dashicons dashicons-warning text-danger" style="font-size: 16px; margin-left: 8px;" title="JavaScript Integration also enabled - conflict detected"></span>';
+					$html .= '</div>';
+					$html .= '<a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration" class="button button-secondary" style="background: #d63638; color: white; border-color: #d63638; text-decoration: none;">Resolve Integration Conflict</a>';
+				} else {
+					// Normal cloud integration status
+					$html .= '<div style="display: flex; align-items: center; padding: 12px 0;">';
+					$html .= '<span class="dashicons dashicons-cloud-saved text-success" style=" font-size: 20px; margin-right: 8px;"></span>';
+					$html .= '<span class="text-success" style="font-weight: 600; font-size: 14px;">Cloud Integrated</span>';
+					$html .= '</div>';
+				}
 			} elseif (!empty($options['integration_type']) && $options['integration_type'] == "sa") {
 				// Check if plugin is managing the SA integration
 				$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
@@ -690,6 +703,23 @@ class Ezoic_Integration_Renderer
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Display Cloud Integration conflict warning
+	 */
+	public static function display_cloud_integration_warning()
+	{
+		echo '<div class="notice notice-warning" style="margin: 20px 0; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107;">';
+		echo '<h4 style="margin-top: 0; color: #856404;"><span class="dashicons dashicons-warning" style="vertical-align: middle; margin-right: 5px;"></span>' . __('Cloud Integration Active', 'ezoic') . '</h4>';
+		echo '<p>' . __('Your site is currently using Cloud Integration. To switch to JavaScript Integration, you\'ll need to remove Cloud Integration first to prevent conflicts.', 'ezoic') . '</p>';
+		echo '<p><strong>' . __('If you used Cloudflare through Ezoic:', 'ezoic') . '</strong></p>';
+		echo '<ul style="margin-left: 20px; list-style: disc;"><li>' . __('Go to <a href="https://pubdash.ezoic.com/settings/connection/siteintegration" target="_blank">Site Integration Settings</a>', 'ezoic') . '</li>';
+		echo '<li>' . __('Click "Remove Cloudflare"', 'ezoic') . '</li></ul>';
+		echo '<p><strong>' . __('If you used name server integration:', 'ezoic') . '</strong></p>';
+		echo '<ul style="margin-left: 20px; list-style: disc;"><li>' . __('Log into your domain registrar', 'ezoic') . '</li>';
+		echo '<li>' . __('Change your name servers back to your original hosting provider', 'ezoic') . '</li></ul>';
+		echo '</div>';
 	}
 
 	/**
