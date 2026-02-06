@@ -72,13 +72,25 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 				$insertion_rule = $ruleMap[$nodeIdx];
 				$placeholder = $this->config->placeholders[$insertion_rule->placeholder_id];
 
+				// Skip if this placement has already been inserted on this page
+				if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - already inserted on this page.",
+						'Content Ads',
+						'info',
+						$placeholder->position_id
+					);
+					$nodeIdx++;
+					continue;
+				}
+
 				// Skip if this placeholder already exists in content
 				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
 					Ezoic_Integration_Logger::console_debug(
 						"Placement skipped - placeholder already exists in content.",
 						'Content Ads',
 						'info',
-						$insertion_rule->placeholder_id
+						$placeholder->position_id
 					);
 					$nodeIdx++;
 					continue;
@@ -87,10 +99,14 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 				switch ($insertion_rule->display) {
 					case 'before_paragraph':
 						\pq($node)->prepend($placeholder->embed_code(3));
+						Ezoic_AdTester::mark_placement_inserted($placeholder->position_id);
+						Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 						break;
 
 					case 'after_paragraph':
 						\pq($node)->append($placeholder->embed_code(3));
+						Ezoic_AdTester::mark_placement_inserted($placeholder->position_id);
+						Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 						break;
 				}
 			}

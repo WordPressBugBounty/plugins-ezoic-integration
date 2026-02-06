@@ -11,21 +11,21 @@ namespace Ezoic_Namespace;
  * @package    Ezoic_Integration
  * @subpackage Ezoic_Integration/admin
  */
-class Ezoic_Settings_Helpers
-{
+class Ezoic_Settings_Helpers {
+
 	/**
 	 * Prepare all context data needed for rendering the settings page
 	 *
 	 * @return array Context data for page rendering
 	 */
-	public function prepare_page_context()
-	{
+	public function prepare_page_context() {
 		return array(
-			'cdn_warning' => $this->get_cdn_warning(),
-			'atm_warning' => $this->get_atm_warning(),
+			'cdn_warning'            => $this->get_cdn_warning(),
+			'atm_warning'            => $this->get_atm_warning(),
 			'js_integration_warning' => $this->get_js_integration_warning(),
-			'atm_status' => Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true),
-			'atm_detection_result' => null // Will be set by get_atm_warning if needed
+			'ad_placements_warning'  => $this->get_ad_placements_warning(),
+			'atm_status'             => Ezoic_AdsTxtManager::ezoic_adstxtmanager_status( false ),
+			'atm_detection_result'   => null, // Will be set by get_atm_warning if needed
 		);
 	}
 
@@ -34,13 +34,12 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return string HTML warning indicator or empty string
 	 */
-	public function get_cdn_warning()
-	{
-		$cdn_warning = "";
-		$api_key = Ezoic_Cdn::ezoic_cdn_api_key();
-		if (!empty($api_key)) {
+	public function get_cdn_warning() {
+		$cdn_warning = '';
+		$api_key     = Ezoic_Cdn::ezoic_cdn_api_key();
+		if ( ! empty( $api_key ) ) {
 			$ping_test = Ezoic_Cdn::ezoic_cdn_ping();
-			if (!empty($ping_test) && is_array($ping_test) && $ping_test[0] == false) {
+			if ( ! empty( $ping_test ) && is_array( $ping_test ) && $ping_test[0] == false ) {
 				$cdn_warning = "<span class='dashicons dashicons-warning ez_error'></span>";
 			}
 		}
@@ -52,42 +51,41 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return array Array containing 'warning' HTML and 'detection_result' if applicable
 	 */
-	public function get_atm_warning()
-	{
-		$atm_warning = "";
-		$atm_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id();
-		$atm_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
+	public function get_atm_warning() {
+		$atm_warning          = '';
+		$atm_id               = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id();
+		$atm_status           = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status( false );
 		$atm_detection_result = null;
 
-		if (Ezoic_AdsTxtManager::ezoic_should_show_adstxtmanager_setting()) {
+		if ( Ezoic_AdsTxtManager::ezoic_should_show_adstxtmanager_setting() ) {
 			// Only check ads.txt detection during integration recheck (not on every page load)
-			$options = get_option('ezoic_integration_status');
+			$options    = get_option( 'ezoic_integration_status' );
 			$time_check = time() - 21600; // 6 hours
-			$is_recheck = !isset($options['is_integrated']) || $options['check_time'] <= $time_check || (isset($_GET['recheck']) && $_GET['recheck']);
+			$is_recheck = ! isset( $options['is_integrated'] ) || $options['check_time'] <= $time_check || ( isset( $_GET['recheck'] ) && $_GET['recheck'] );
 
-			if (Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect() && $is_recheck) {
+			if ( Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect() && $is_recheck ) {
 				$atm_detection_result = Ezoic_AdsTxtManager::ezoic_detect_adstxtmanager_id();
-			} elseif (!Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect() && $is_recheck && $atm_id > 0) {
+			} elseif ( ! Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect() && $is_recheck && $atm_id > 0 ) {
 				// For manual ATM ID entries, refresh status during recheck to ensure accuracy
 				$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
-				update_option('ezoic_adstxtmanager_status', $redirect_result);
+				update_option( 'ezoic_adstxtmanager_status', $redirect_result );
 				// Refresh cached status after updating
 				$atm_status = $redirect_result;
 			}
 
-			if ($atm_detection_result && isset($atm_detection_result['error'])) {
-				if (in_array($atm_detection_result['error'], array('connection_error', 'server_error', 'setup_failed'))) {
+			if ( $atm_detection_result && isset( $atm_detection_result['error'] ) ) {
+				if ( in_array( $atm_detection_result['error'], array( 'connection_error', 'server_error', 'setup_failed' ) ) ) {
 					$atm_warning = "<span class='dashicons dashicons-warning ez_error'></span>";
 				} else {
 					$atm_warning = "<span class='dashicons dashicons-warning ez_warning'></span>";
 				}
-			} elseif ($atm_detection_result && isset($atm_detection_result['success']) && $atm_detection_result['success']) {
+			} elseif ( $atm_detection_result && isset( $atm_detection_result['success'] ) && $atm_detection_result['success'] ) {
 				// Auto-detection was successful, use current cached status
 				// $atm_status is already set and current from the initial call
-			} elseif (isset($atm_status['status']) && !$atm_status['status']) {
+			} elseif ( isset( $atm_status['status'] ) && ! $atm_status['status'] ) {
 				// Show error for failed ads.txt redirect when JS Integration is enabled, otherwise warning
-				$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
-				if ($js_integration_enabled) {
+				$js_integration_enabled = get_option( 'ezoic_js_integration_enabled', false );
+				if ( $js_integration_enabled ) {
 					$atm_warning = "<span class='dashicons dashicons-warning ez_error'></span>";
 				} else {
 					$atm_warning = "<span class='dashicons dashicons-warning ez_warning'></span>";
@@ -96,9 +94,9 @@ class Ezoic_Settings_Helpers
 		}
 
 		return array(
-			'warning' => $atm_warning,
+			'warning'          => $atm_warning,
 			'detection_result' => $atm_detection_result,
-			'status' => $atm_status
+			'status'           => $atm_status,
 		);
 	}
 
@@ -108,15 +106,14 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return string HTML warning indicator or empty string
 	 */
-	public function get_js_integration_warning()
-	{
-		$js_warning = "";
+	public function get_js_integration_warning() {
+		$js_warning   = '';
 		$has_warnings = false;
 
 		// Check for Cloud Integration conflict
-		if (Ezoic_Integration_Admin::is_cloud_integrated()) {
-			$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
-			if ($js_integration_enabled) {
+		if ( Ezoic_Integration_Admin::is_cloud_integrated() ) {
+			$js_integration_enabled = get_option( 'ezoic_js_integration_enabled', false );
+			if ( $js_integration_enabled ) {
 				// High priority: both integrations active - use error icon
 				$js_warning = "<span class='dashicons dashicons-warning ez_error'></span>";
 				return $js_warning;
@@ -124,30 +121,30 @@ class Ezoic_Settings_Helpers
 		}
 
 		// Only check duplicate scripts if JS integration is enabled
-		if (!get_option('ezoic_js_integration_enabled', false)) {
+		if ( ! get_option( 'ezoic_js_integration_enabled', false ) ) {
 			return $js_warning;
 		}
 
-		$js_options = get_option('ezoic_js_integration_options', array());
-		$auto_insert_enabled = isset($js_options['js_auto_insert_scripts']) ? $js_options['js_auto_insert_scripts'] : 1;
-		$privacy_enabled = isset($js_options['js_enable_privacy_scripts']) ? $js_options['js_enable_privacy_scripts'] : 1;
+		$js_options          = get_option( 'ezoic_js_integration_options', array() );
+		$auto_insert_enabled = isset( $js_options['js_auto_insert_scripts'] ) ? $js_options['js_auto_insert_scripts'] : 1;
+		$privacy_enabled     = isset( $js_options['js_enable_privacy_scripts'] ) ? $js_options['js_enable_privacy_scripts'] : 1;
 
 		// Check for duplicate scripts using cached results
 		// This will only make HTTP requests on plugin pages and cache the results
 		$js_integration_settings = new Ezoic_JS_Integration_Settings();
-		$duplicate_scripts = $js_integration_settings->get_all_duplicate_scripts();
+		$duplicate_scripts       = $js_integration_settings->get_all_duplicate_scripts();
 
 		// Check SA scripts if auto-insert is enabled
-		if ($auto_insert_enabled && $duplicate_scripts['sa']) {
+		if ( $auto_insert_enabled && $duplicate_scripts['sa'] ) {
 			$has_warnings = true;
 		}
 
 		// Check privacy scripts if privacy scripts are enabled
-		if ($privacy_enabled && $duplicate_scripts['privacy']) {
+		if ( $privacy_enabled && $duplicate_scripts['privacy'] ) {
 			$has_warnings = true;
 		}
 
-		if ($has_warnings) {
+		if ( $has_warnings ) {
 			$js_warning = "<span class='dashicons dashicons-warning ez_warning'></span>";
 		}
 
@@ -155,30 +152,64 @@ class Ezoic_Settings_Helpers
 	}
 
 	/**
+	 * Generate Ad Placements warning indicator when JS integration is enabled
+	 * with WP placeholders but no placeholders are configured
+	 *
+	 * @return string HTML warning indicator or empty string
+	 */
+	public function get_ad_placements_warning() {
+		// Only show if JS integration is enabled
+		if ( ! get_option( 'ezoic_js_integration_enabled', false ) ) {
+			return '';
+		}
+
+		$js_options              = get_option( 'ezoic_js_integration_options', array() );
+		$wp_placeholders_enabled = isset( $js_options['js_use_wp_placeholders'] ) ? $js_options['js_use_wp_placeholders'] : 1;
+
+		// Only show if WP placeholders option is enabled
+		if ( ! $wp_placeholders_enabled ) {
+			return '';
+		}
+
+		// Check if placeholders exist
+		try {
+			$adtester         = new Ezoic_AdTester();
+			$has_placeholders = ! empty( $adtester->config->placeholders );
+		} catch ( \Exception $e ) {
+			return '';
+		}
+
+		if ( $has_placeholders ) {
+			return '';
+		}
+
+		return "<span class='dashicons dashicons-warning ez_warning'></span>";
+	}
+
+	/**
 	 * Get active incompatible plugins for compatibility warnings
 	 *
 	 * @return array Array of incompatible plugins with hosting issues flag
 	 */
-	public function get_compatibility_issues()
-	{
-		$hosting_issue = false;
+	public function get_compatibility_issues() {
+		$hosting_issue        = false;
 		$incompatible_plugins = Ezoic_Integration_Compatibility_Check::get_active_incompatible_plugins();
-		$compatible_plugins = Ezoic_Integration_Compatibility_Check::get_compatible_plugins_with_recommendations();
+		$compatible_plugins   = Ezoic_Integration_Compatibility_Check::get_compatible_plugins_with_recommendations();
 
 		// Check for WPEngine hosting compatibility issues
-		$options = get_option('ezoic_integration_status');
+		$options = get_option( 'ezoic_integration_status' );
 		/** @phpstan-ignore-next-line */
-		if (function_exists('is_wpe')) {
-			if (\is_wpe() && (isset($options['integration_type']) && $options['integration_type'] == "wp")) {
+		if ( function_exists( 'is_wpe' ) ) {
+			if ( \is_wpe() && ( isset( $options['integration_type'] ) && $options['integration_type'] == 'wp' ) ) {
 				$hosting_issue = true;
 			}
 		}
 
 		return array(
 			'incompatible_plugins' => $incompatible_plugins,
-			'compatible_plugins' => $compatible_plugins,
-			'hosting_issue' => $hosting_issue,
-			'has_issues' => (count($incompatible_plugins) > 0 || count($compatible_plugins) > 0 || $hosting_issue)
+			'compatible_plugins'   => $compatible_plugins,
+			'hosting_issue'        => $hosting_issue,
+			'has_issues'           => ( count( $incompatible_plugins ) > 0 || count( $compatible_plugins ) > 0 || $hosting_issue ),
 		);
 	}
 
@@ -188,9 +219,8 @@ class Ezoic_Settings_Helpers
 	 * @param string $default_tab Default tab if none specified
 	 * @return string The active tab name
 	 */
-	public function determine_active_tab($default_tab = 'integration_status')
-	{
-		if (isset($_GET['tab']) && !empty($_GET['tab'])) {
+	public function determine_active_tab( $default_tab = 'integration_status' ) {
+		if ( isset( $_GET['tab'] ) && ! empty( $_GET['tab'] ) ) {
 			return $_GET['tab'];
 		}
 		return $default_tab;
@@ -201,22 +231,21 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return array Message data for display
 	 */
-	public function get_form_messages()
-	{
+	public function get_form_messages() {
 		$messages = array();
 
 		// Check for JavaScript integration status messages
-		if (isset($_GET['js_integration_disabled']) && $_GET['js_integration_disabled'] == '1') {
+		if ( isset( $_GET['js_integration_disabled'] ) && $_GET['js_integration_disabled'] == '1' ) {
 			$messages[] = array(
-				'type' => 'success',
-				'message' => __('JavaScript Integration has been disabled. Your site will now use automatic integration detection.', 'ezoic')
+				'type'    => 'success',
+				'message' => __( 'JavaScript Integration has been disabled. Your site will now use automatic integration detection.', 'ezoic' ),
 			);
 		}
 
-		if (isset($_GET['js_integration_enabled']) && $_GET['js_integration_enabled'] == '1') {
+		if ( isset( $_GET['js_integration_enabled'] ) && $_GET['js_integration_enabled'] == '1' ) {
 			$messages[] = array(
-				'type' => 'success',
-				'message' => __('JavaScript Integration has been enabled! You can now configure it in the Integration tab.', 'ezoic')
+				'type'    => 'success',
+				'message' => __( 'JavaScript Integration has been enabled! You can now configure it in the Integration tab.', 'ezoic' ),
 			);
 		}
 
@@ -228,12 +257,11 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return array Default options
 	 */
-	public function get_default_display_options()
-	{
+	public function get_default_display_options() {
 		return array(
-			'is_integrated' => false,
+			'is_integrated'    => false,
 			'integration_type' => 'off',
-			'check_time' => '',
+			'check_time'       => '',
 		);
 	}
 
@@ -242,11 +270,10 @@ class Ezoic_Settings_Helpers
 	 *
 	 * @return array Default advanced options
 	 */
-	public function get_default_advanced_options()
-	{
+	public function get_default_advanced_options() {
 		return array(
-			'verify_ssl' => true,
-			'caching' => false,
+			'verify_ssl'             => true,
+			'caching'                => false,
 			'disable_wp_integration' => true, // disable wp integration by default
 		);
 	}

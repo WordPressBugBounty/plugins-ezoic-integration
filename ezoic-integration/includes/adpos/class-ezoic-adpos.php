@@ -55,14 +55,16 @@ class Ezoic_AdPos extends Ezoic_Feature
 	public static function get_current_page_type()
 	{
 		// Match the supported page types from the ad insertion system
-		if (\is_front_page()) {
-			return 'home';
-		} elseif (\is_category() || \is_home()) {
-			return 'category';
-		} elseif (\is_single() || \is_archive()) {
+		if (\is_single()) {
 			return 'post';
 		} elseif (\is_page()) {
 			return 'page';
+		} elseif (\is_front_page() || \is_home()) {
+			return 'home';
+		} elseif (\is_category()) {
+			return 'category';
+		} elseif (\is_archive()) {
+			return 'post';
 		} else {
 			return 'post';
 		}

@@ -103,17 +103,69 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
+		// Check if any placements have been marked as inserted
+		// If so, check if the content already has placeholders - if not, we need to re-insert
+		$any_marked_inserted = false;
+		foreach ($rules as $rule) {
+			if ($rule->display != 'disabled') {
+				$placeholder = $this->config->placeholders[$rule->placeholder_id];
+				if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
+					$any_marked_inserted = true;
+					break;
+				}
+			}
+		}
+
+		// If placements are marked as inserted but content doesn't have them, the_content was called again with original content
+		// In this case, we need to re-process to add the ads back
+		if ($any_marked_inserted) {
+			// Check if the specific marked placements exist in content
+			$all_marked_placements_present = true;
+			foreach ($rules as $rule) {
+				if ($rule->display != 'disabled') {
+					$placeholder = $this->config->placeholders[$rule->placeholder_id];
+					if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
+						// This placement is marked as inserted, verify it exists in content
+						if (\strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") === false) {
+							// Placement marked as inserted but not in content
+							$all_marked_placements_present = false;
+						}
+					}
+				}
+			}
+
+			if ($all_marked_placements_present) {
+				// All marked placements are present in content, return as-is
+				return $content;
+			}
+		}
+
 		// Sort rules based on paragraph order
 		\usort($rules, function ($a, $b) {
-			if ((int) $a->display_option < (int) $b->display_option) {
-				return -1;
-			} else {
-				return 1;
+			$a_pos = (int) $a->display_option;
+			$b_pos = (int) $b->display_option;
+
+			if ($a_pos !== $b_pos) {
+				return $a_pos < $b_pos ? -1 : 1;
 			}
+
+			// For the same paragraph, insert "before" first to avoid offset collisions
+			$a_before = ($a->display === 'before_paragraph');
+			$b_before = ($b->display === 'before_paragraph');
+			if ($a_before !== $b_before) {
+				return $a_before ? -1 : 1;
+			}
+
+			return 0;
 		});
 
 		// Extract all paragraph tags
 		$this->paragraphs = $this->get_paragraphs($content);
+
+		// If no paragraphs found, skip silently (likely processing non-content areas like widgets)
+		if (\count($this->paragraphs) === 0) {
+			return $content;
+		}
 
 		// Insert placeholders
 		foreach ($rules as $rule) {
@@ -123,10 +175,10 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 				// Skip if this placeholder already exists in content
 				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
 					Ezoic_Integration_Logger::console_debug(
-						"Placement skipped - placeholder already exists in content. Placeholder ID: {$rule->placeholder_id}",
+						"Placement skipped - placeholder already exists in content.",
 						'Content Ads',
 						'info',
-						$rule->placeholder_id
+						$placeholder->position_id
 					);
 					continue;
 				}
@@ -144,11 +196,12 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 						continue 2;
 				}
 			} else {
+				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 				Ezoic_Integration_Logger::console_debug(
-					"Placement skipped - display is disabled. Placeholder ID: {$rule->placeholder_id}",
+					"Placement skipped - display is disabled.",
 					'Content Ads',
 					'info',
-					$rule->placeholder_id
+					$placeholder->position_id
 				);
 			}
 		}
@@ -161,6 +214,10 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 	 */
 	private function relative_to_paragraph($placeholder, $paragraph_number, $content, $mode = 'before')
 	{
+		// Check if this is a genuine new insertion (not already in content AND not already marked as inserted)
+		$already_in_content = \strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false;
+		$was_previously_inserted = Ezoic_AdTester::is_placement_inserted($placeholder->position_id);
+
 		// Get markup for the placeholder
 		$placeholder_markup		= $placeholder->embed_code(2);
 		$placeholder_markup_len	= ez_strlen($placeholder_markup);
@@ -209,19 +266,24 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		$original_content_length = strlen($content);
 		$insertion_position = $position + $this->position_offset;
 
-		$content = \ez_substr_replace($content, $placeholder_markup, $insertion_position);
+		// Use substr_replace instead of ez_substr_replace because tag parser returns BYTE positions but ez_substr_replace uses mb_substr which expects CHARACTER positions
+		$content = \substr_replace($content, $placeholder_markup, $insertion_position, 0);
 		$this->position_offset += $placeholder_markup_len;
 
 		// Check if insertion actually happened
 		$new_content_length = strlen($content);
 		if ($new_content_length > $original_content_length) {
 			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
-			Ezoic_Integration_Logger::console_debug(
-				"Inserted {$mode} paragraph {$placement_paragraph}",
-				'Content Ads',
-				'info',
-				$placeholder->position_id
-			);
+			Ezoic_AdTester::mark_placement_inserted($placeholder->position_id);
+			// Only log if this is a truly new insertion (not already in content AND not previously marked as inserted)
+			if (!$already_in_content && !$was_previously_inserted) {
+				Ezoic_Integration_Logger::console_debug(
+					"Inserted {$mode} paragraph {$placement_paragraph}",
+					'Content Ads',
+					'info',
+					$placeholder->position_id
+				);
+			}
 		} else {
 			Ezoic_Integration_Logger::console_debug(
 				"Failed insertion: Content unchanged (insertion error)",
@@ -280,7 +342,9 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 					$sub_content = \ez_substr($content, $paragraph->open, $paragraph->close - $paragraph->open);
 					$word_count = \ez_word_count($sub_content);
 
-					$paragraph_valid = $word_count >= $this->config->skip_word_count;
+					if ($word_count < $this->config->skip_word_count) {
+						$paragraph_valid = false;
+					}
 				}
 
 				// Record paragraph if valid
@@ -289,6 +353,29 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 				}
 			}
 		} else {
+			// No filters, apply only word count filter if configured
+			if (isset($this->config->skip_word_count) && $this->config->skip_word_count > 0) {
+				foreach ($paragraphs as $paragraph) {
+					$paragraph_valid = true;
+
+					// Apply word count filter (skip for img tags)
+					if ($paragraph->tag !== 'img') {
+						$sub_content = \ez_substr($content, $paragraph->open, $paragraph->close - $paragraph->open);
+						$word_count = \ez_word_count($sub_content);
+
+						if ($word_count < $this->config->skip_word_count) {
+							$paragraph_valid = false;
+						}
+					}
+
+					if ($paragraph_valid) {
+						$filtered_paragraphs[] = $paragraph;
+					}
+				}
+
+				return $filtered_paragraphs;
+			}
+
 			return $paragraphs;
 		}
 

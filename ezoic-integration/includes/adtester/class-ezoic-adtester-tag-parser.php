@@ -48,7 +48,7 @@ class Ezoic_AdTester_Tag_Parser
 			!isset($paragraph_tags) ||
 			\count($paragraph_tags) === 0
 		) {
-			return $content;
+			return array();
 		}
 
 		// Find all open and close tags

@@ -26,6 +26,14 @@ class Ezoic_Integration_Authentication {
 	 * Fetches a token for use in calls to the backend
 	 */
 	public static function get_token($requestURL = "") {
+		global $wp_rewrite;
+
+		// Ensure WordPress is fully loaded before making REST API calls
+		// get_rest_url() requires $wp_rewrite to be initialized
+		if ( ! did_action( 'init' ) || is_null( $wp_rewrite ) ) {
+			return "";
+		}
+
 		// Build request
 		if ($requestURL == ""){
 			$requestURL = self::AUTH_ENDPOINT;

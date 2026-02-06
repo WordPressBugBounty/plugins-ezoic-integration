@@ -5,7 +5,8 @@ namespace Ezoic_Namespace;
 class Ezoic_AdTester_Placeholder
 {
 	const EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s --><div id="ezoic-pub-ad-placeholder-%d" %s data-inserter-version="%d"></div><!-- End Ezoic - %s - %s -->';
-	const JS_EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s --><div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d"></div><script data-ezoic="1">ezstandalone.cmd.push(function () { ezstandalone.showAds(%d); });</script><!-- End Ezoic - %s - %s -->';
+	const JS_EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s --><div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d" data-placement-location="%s"></div><script data-ezoic="1"%s>ezstandalone.cmd.push(function () { ezstandalone.showAds(%d); });</script><!-- End Ezoic - %s - %s -->';
+	const JS_EMBED_CODE_TEMPLATE_NO_ADS = '<!-- Ezoic - %s - %s (Ads Disabled) --><div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d"></div><!-- End Ezoic - %s - %s -->';
 
 	// Track if any JS placeholders have been inserted
 	private static $js_placeholders_inserted = false;
@@ -51,10 +52,30 @@ class Ezoic_AdTester_Placeholder
 			// Mark that a JS placeholder was inserted
 			self::$js_placeholders_inserted = true;
 
+			// Check if ads are disabled for the current user
+			$ads_disabled = isset($_COOKIE['x-ez-wp-noads']) && $_COOKIE['x-ez-wp-noads'] == '1';
+
 			// Return JavaScript ad code for JS integration
 			$dataAttr = "";
 			if ($this->is_video_placeholder) {
 				$dataAttr = ' data-ezhumixplayerlocation="true"';
+			}
+
+			// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
+			$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+
+			// If ads are disabled, return placeholder without showAds() call
+			if ($ads_disabled) {
+				return sprintf(
+					self::JS_EMBED_CODE_TEMPLATE_NO_ADS,
+					$this->name,
+					$this->position_type,
+					$this->position_id,
+					$dataAttr,
+					$inserter_version,
+					$this->name,
+					$this->position_type
+				);
 			}
 
 			return sprintf(
@@ -64,6 +85,8 @@ class Ezoic_AdTester_Placeholder
 				$this->position_id,
 				$dataAttr,
 				$inserter_version,
+				$this->position_type,
+				$litespeed_attr,
 				$this->position_id,
 				$this->name,
 				$this->position_type

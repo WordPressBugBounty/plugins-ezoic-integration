@@ -373,6 +373,12 @@ class Ezoic_Integration_Public
 		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_footer', $this, 'inject_fallback_showads', 15);
 		}
+
+		// Exclude Ezoic scripts from LiteSpeed Cache optimization if plugin is active
+		if (Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active()) {
+			$this->loader->add_filter('litespeed_optimize_js_excludes', $this, 'exclude_ezoic_scripts_from_litespeed', 10);
+			$this->loader->add_filter('litespeed_optm_js_defer_exc', $this, 'exclude_ezoic_scripts_from_litespeed', 10);
+		}
 	}
 
 	/**
@@ -390,12 +396,14 @@ class Ezoic_Integration_Public
 			echo '<!-- Ezoic JS Preview Mode Active -->' . "\n";
 		}
 
+		// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
+		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
 
 		// Main Ezoic script
-		echo '<script id="ezoic-wp-plugin-js" async src="' . EZOIC_SA_SCRIPT_URL . '"></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-js" async src="' . EZOIC_SA_SCRIPT_URL . '"' . $litespeed_attr . '></script>' . "\n";
 
 		// Initialize ezstandalone
-		echo '<script data-ezoic="1">window.ezstandalone = window.ezstandalone || {};';
+		echo '<script data-ezoic="1"' . $litespeed_attr . '>window.ezstandalone = window.ezstandalone || {};';
 		echo 'ezstandalone.cmd = ezstandalone.cmd || [];</script>' . "\n";
 	}
 
@@ -409,9 +417,12 @@ class Ezoic_Integration_Public
 			return;
 		}
 
+		// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
+		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+
 		// Privacy/CMP scripts (must load first)
-		echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
-		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
 	}
 
 	/**
@@ -424,10 +435,19 @@ class Ezoic_Integration_Public
 			return;
 		}
 
+		// Don't call showAds if user has ads disabled based on their role
+		if ($this->should_disable_ads_for_user()) {
+			echo '<!-- Ezoic showAds() skipped - ads disabled for user role -->' . "\n";
+			return;
+		}
+
 		// Check if any Ezoic JS placeholders were inserted using the class method
 		if (!Ezoic_AdTester_Placeholder::js_placeholders_inserted()) {
+			// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
+			$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+
 			// No JS placeholders were inserted, add fallback showAds() call
-			echo '<script data-ezoic="1">ezstandalone.cmd.push(function () { ezstandalone.showAds(); });</script>' . "\n";
+			echo '<script data-ezoic="1"' . $litespeed_attr . '>ezstandalone.cmd.push(function () { ezstandalone.showAds(); });</script>' . "\n";
 		}
 	}
 
@@ -631,5 +651,54 @@ class Ezoic_Integration_Public
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if ads should be disabled for the current user based on their role
+	 * This checks for the no-ads cookie that is set by the AdTester class
+	 *
+	 * @return bool True if ads should be disabled, false otherwise
+	 */
+	private function should_disable_ads_for_user()
+	{
+		// Check for the no-ads cookie set by AdTester
+		if (isset($_COOKIE['x-ez-wp-noads']) && $_COOKIE['x-ez-wp-noads'] == '1') {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Exclude Ezoic scripts from LiteSpeed Cache JS optimization and deferring
+	 * This prevents LiteSpeed from minifying/combining/deferring our sa.min.js file
+	 *
+	 * Used for both:
+	 * - litespeed_optimize_js_excludes (prevent minification/combination)
+	 * - litespeed_optm_js_defer_exc (prevent defer/delay)
+	 *
+	 * @param array $excludes Array of JS files/patterns to exclude from optimization
+	 * @return array Modified array with Ezoic scripts added
+	 */
+	public function exclude_ezoic_scripts_from_litespeed($excludes)
+	{
+		if (!is_array($excludes)) {
+			$excludes = array();
+		}
+
+		// Add Ezoic script URLs to exclusion list
+		$ezoic_scripts = array(
+			'ezojs.com/ezoic/sa.min.js',
+			'cmp.gatekeeperconsent.com/min.js',
+			'the.gatekeeperconsent.com/cmp.min.js'
+		);
+
+		foreach ($ezoic_scripts as $script) {
+			if (!in_array($script, $excludes)) {
+				$excludes[] = $script;
+			}
+		}
+
+		return $excludes;
 	}
 }

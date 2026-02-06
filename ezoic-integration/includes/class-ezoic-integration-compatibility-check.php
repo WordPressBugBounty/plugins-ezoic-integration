@@ -214,4 +214,27 @@ class Ezoic_Integration_Compatibility_Check
 		$url = wp_nonce_url($url, $action . '-plugin_' . $plugin);
 		return $url;
 	}
+
+	/**
+	 * Check if LiteSpeed Cache plugin is active
+	 *
+	 * @return bool True if LiteSpeed Cache is active, false otherwise
+	 */
+	public static function is_litespeed_cache_active()
+	{
+		static $is_active = null;
+
+		// Return cached result if already checked
+		if ($is_active !== null) {
+			return $is_active;
+		}
+
+		// Check if LiteSpeed Cache plugin is active
+		if (!function_exists('is_plugin_active')) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		$is_active = is_plugin_active('litespeed-cache/litespeed-cache.php');
+		return $is_active;
+	}
 }

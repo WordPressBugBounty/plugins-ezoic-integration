@@ -8,14 +8,30 @@ class Ezoic_Integration_CURL_Request implements iEzoic_Integration_Request {
 	private $request_data;
 
 	public function __construct() {
-		$this->request_data = Ezoic_Integration_Request_Utils::get_request_base_data();
+		// Only initialize request data if WordPress functions are available
+		// Otherwise defer until first use
+		if (function_exists('get_option')) {
+			$this->request_data = Ezoic_Integration_Request_Utils::get_request_base_data();
+		}
+	}
+
+	/**
+	 * Ensure request data is loaded (lazy load if not initialized in constructor)
+	 */
+	private function ensure_request_data_loaded() {
+		if (!isset($this->request_data)) {
+			$this->request_data = Ezoic_Integration_Request_Utils::get_request_base_data();
+		}
 	}
 
 	public function get_content_response_from_ezoic( $final_content, $available_templates = array() ) {
+		$this->ensure_request_data_loaded();
 		return $this->request_data_from_ezoic($final_content, $available_templates);
 	}
 
 	public function request_data_from_ezoic( $final_content, $available_templates ) {
+		$this->ensure_request_data_loaded();
+
 		$timeout = 5;
 
 		if ( isset( $_REQUEST['ez_timeout'] ) && \is_numeric( $_REQUEST['ez_timeout'] ) ) {

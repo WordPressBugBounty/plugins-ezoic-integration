@@ -183,7 +183,7 @@ class DOMDocumentWrapper {
 	}
 	public function load($markup, $contentType = null, $newDocumentID = null) {
 //		phpQuery::$documents[$id] = $this;
-		$this->contentType = strtolower($contentType);
+		$this->contentType = isset($contentType) ? strtolower($contentType) : null;
 		if ($markup instanceof DOMDOCUMENT) {
 			$this->document = $markup;
 			$this->root = $this->document;

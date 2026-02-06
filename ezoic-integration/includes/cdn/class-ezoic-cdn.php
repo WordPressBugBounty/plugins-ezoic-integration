@@ -105,6 +105,14 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		return $url;
 	}
 
+	private static function is_cloud_integrated() {
+		if ( class_exists( 'Ezoic_Namespace\\Ezoic_Integration_Factory' ) ) {
+			return \Ezoic_Namespace\Ezoic_Integration_Factory::is_cloud_request();
+		}
+
+		return false;
+	}
+
 	/**
 	 * Helper Function to retrieve the API Key from WordPress Options
 	 *
@@ -121,7 +129,6 @@ class Ezoic_Cdn extends Ezoic_Feature {
 
 		return $api_key;
 	}
-
 
 	/**
 	 * Helper function to get the Ezoic Domain from the WordPress Options
@@ -165,7 +172,6 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	public static function fb_clear_cache_enabled() {
 		return get_option( 'fb_clear_cache_enabled', 'off' ) === "on";
 	}
-
 
 	/**
 	 * Helper function to get the Facebook App ID from the WordPress Options
@@ -286,7 +292,6 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		return (bool) $always_home;
 	}
 
-
 	/**
 	 * Helper function to determine if verbose mode is on.
 	 *
@@ -312,6 +317,9 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	// -------------------------------------------------------------------------
 
 	public function ezoic_cdn_clear_url( $url = null ) {
+		if ( ! self::is_cloud_integrated() ) {
+			return;
+		}
 		if ( in_array( $url, $this->ezoic_cdn_already_purged, true ) ) {
 			return;
 		}
@@ -356,6 +364,9 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	 * @since 1.0.0
 	 */
 	function ezoic_cdn_clear_urls( $urls = array(), $scheduled = false ) {
+		if ( ! self::is_cloud_integrated() ) {
+			return;
+		}
 		$urls = array_merge( $urls, self::ezoic_cdn_get_urls_to_always_purge() );
 
 		$urls = array_filter( array_unique( array_diff( $urls, $this->ezoic_cdn_already_purged ) ) );
@@ -456,6 +467,9 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	}
 
 	public function ezoic_cdn_clear_surrogate_keys( $keys = array(), $domain = null ) {
+		if ( ! self::is_cloud_integrated() ) {
+			return;
+		}
 		$keys = array_merge( $keys, self::ezoic_cdn_get_surrogate_keys_to_always_purge() );
 
 		if ( ! $domain ) {
@@ -497,6 +511,9 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	}
 
 	public function ezoic_cdn_purge( $domain = null ) {
+		if ( ! self::is_cloud_integrated() ) {
+			return;
+		}
 		$api_key = self::ezoic_cdn_api_key();
 		if ( empty( $api_key ) ) {
 			return;
@@ -982,7 +999,8 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	}
 
 	public function ezoic_cdn_add_headers() {
-		if ( ! self::ezoic_cdn_is_enabled() ) {
+		$cdn_enabled = self::ezoic_cdn_is_enabled();
+		if ( ! $cdn_enabled ) {
 			return;
 		}
 		global $wp_query;
@@ -990,16 +1008,17 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		$object         = get_queried_object();
 		$surrogate_keys = array();
 		$last_modified  = time();
-
 		$browser_max_age = 60 * 60; // Browser Cache pages 1 hour.
 		$server_max_age  = 86400 * 365 * 3; // Server Cache pages 3 years.
+
+		if ( is_singular() && $object && isset( $object->post_modified ) ) {
+			$last_modified = strtotime( $object->post_modified );
+		}
 
 		if ( is_singular() ) {
 			$surrogate_keys[] = 'single';
 			$surrogate_keys[] = 'single-' . get_post_type();
 			$surrogate_keys[] = 'single-' . get_the_ID();
-
-			$last_modified = strtotime( $object->post_modified );
 		} elseif ( is_archive() ) {
 			$surrogate_keys[] = 'archive';
 			if ( is_category() ) {

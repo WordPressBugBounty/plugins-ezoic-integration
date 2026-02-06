@@ -112,15 +112,21 @@ class Ezoic_AdTester_PublisherAds
 			)
 		));
 
-		if (!is_wp_error($response)) {
-			$body = wp_remote_retrieve_body($response);
-
-			// Deserialize response
-			$deserialized = json_decode($body);
-
-			// Initialize $ads
-			$this->set($deserialized);
+		if (is_wp_error($response)) {
+			return;
 		}
+
+		$body = wp_remote_retrieve_body($response);
+
+		// Deserialize response
+		$deserialized = json_decode($body);
+
+		if (!$deserialized) {
+			return;
+		}
+
+		// Initialize $ads
+		$this->set($deserialized);
 	}
 
 	/**

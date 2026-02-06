@@ -28,6 +28,7 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 
 	/**
 	 * Protect JavaScript and other content from phpQuery HTML parsing
+	 * Returns array with ['content' => string, 'success' => bool]
 	 */
 	private function protect_js_content($content, &$protected_content)
 	{
@@ -48,13 +49,22 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			$content
 		);
 
+		// Check for PCRE errors (preg_replace_callback returns null on failure)
+		if ($content === null) {
+			Ezoic_Integration_Logger::log_error(
+				"HTML insertion skipped - failed to process HTML comments",
+				'HTML Ads'
+			);
+			return array('content' => $original_content, 'success' => false);
+		}
+
 		// Check if conditional comments protection failed
 		if (empty($content) || strlen($content) < ($original_length * 0.1)) {
 			Ezoic_Integration_Logger::log_error(
 				"HTML insertion failed - content processing error (comments)",
 				'HTML Ads'
 			);
-			return $original_content; // Return original if first step failed
+			return array('content' => $original_content, 'success' => false);
 		}
 
 		// 2. Protect script tags with better regex
@@ -69,13 +79,22 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			$content
 		);
 
+		// Check for PCRE errors (preg_replace_callback returns null on failure)
+		if ($content === null) {
+			Ezoic_Integration_Logger::log_error(
+				"HTML insertion skipped - failed to process page scripts",
+				'HTML Ads'
+			);
+			return array('content' => $original_content, 'success' => false);
+		}
+
 		// Check if script protection failed
 		if (empty($content) || strlen($content) < ($original_length * 0.1)) {
 			Ezoic_Integration_Logger::log_error(
 				"HTML insertion failed - content processing error (script)",
 				'HTML Ads'
 			);
-			return $original_content; // Always return original if protection fails
+			return array('content' => $original_content, 'success' => false);
 		}
 
 		// 3. Protect style tags
@@ -90,17 +109,26 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			$content
 		);
 
+		// Check for PCRE errors (preg_replace_callback returns null on failure)
+		if ($content === null) {
+			Ezoic_Integration_Logger::log_error(
+				"HTML insertion skipped - failed to process page styles",
+				'HTML Ads'
+			);
+			return array('content' => $original_content, 'success' => false);
+		}
+
 		// Check if style protection failed
 		if (empty($content) || strlen($content) < ($original_length * 0.1)) {
 			Ezoic_Integration_Logger::log_error(
 				"HTML insertion failed - content processing error (style)",
 				'HTML Ads'
 			);
-			return $original_content; // Always return original if protection fails
+			return array('content' => $original_content, 'success' => false);
 		}
 
-
-		return $content;
+		// Success - return processed content
+		return array('content' => $content, 'success' => true);
 	}
 	/**
 	 * Restore protected JavaScript content
@@ -166,31 +194,25 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
-		// Pull-in phpQuery to parse the document
-		require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
+		// Pull-in phpQuery to parse the document (use PHP 8+ compatible build)
+		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
+			require_once(dirname(__FILE__) . '/../vendor/phpQuery_8.php');
+		} else {
+			require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
+		}
 
 		// Protect JavaScript and style content from phpQuery HTML parsing
 		$protected_content = array();
 		$original_body_content = $body_tag_matches[2];
-		$body_content = $this->protect_js_content($original_body_content, $protected_content);
+		$protection_result = $this->protect_js_content($original_body_content, $protected_content);
 
-		// Check if protection failed and returned original content
-		if ($body_content === $original_body_content && !empty($protected_content)) {
-			// Protection failed but we have some protected content, skip HTML inserter entirely
-			Ezoic_Integration_Logger::log_error(
-				"HTML insertion failed - JS protection failed with " . count($protected_content) . " protected elements",
-				'HTML Ads'
-			);
-			return $content;
-		} elseif ($body_content === $original_body_content) {
-			// Protection returned original content, likely due to failure, skip processing
-			Ezoic_Integration_Logger::console_debug(
-				"HTML insertion skipped - JS protection returned original content unchanged",
-				'HTML Ads',
-				'warn'
-			);
+		// Check if protection failed
+		if (!$protection_result['success']) {
+			// return original content if protection failed
 			return $content;
 		}
+
+		$body_content = $protection_result['content'];
 
 		// Parse only the body content with phpQuery
 		\libxml_use_internal_errors(true);

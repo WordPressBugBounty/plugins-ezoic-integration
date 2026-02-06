@@ -32,7 +32,9 @@ abstract class Ezoic_AdTester_Inserter
 		if (isset($config->enable_placement_id_selection) && $config->enable_placement_id_selection === true) {
 			// Position ID selection enabled: only include if this is the active placement
 			$active_position_id = $config->get_active_placement($position_type);
-			$should_include = ($active_position_id && $active_position_id == $position_id);
+
+			// Use strict integer comparison to avoid type mismatch issues
+			$should_include = ($active_position_id && intval($active_position_id) === intval($position_id));
 
 			return $should_include;
 		} else {
@@ -41,7 +43,8 @@ abstract class Ezoic_AdTester_Inserter
 
 			if ($active_position_id) {
 				// We have active placement data, so use it even when selection is disabled
-				$should_include = ($active_position_id == $position_id);
+				// Use strict integer comparison to avoid type mismatch issues
+				$should_include = (intval($active_position_id) === intval($position_id));
 
 				/*Ezoic_Integration_Logger::console_debug(
 					"Using active placement data: Placement {$position_id} for position type {$position_type}. Active: {$active_position_id}. Include: " . ($should_include ? 'YES' : 'NO'),

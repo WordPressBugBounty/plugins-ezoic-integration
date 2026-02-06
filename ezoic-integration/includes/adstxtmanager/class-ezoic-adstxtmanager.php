@@ -121,6 +121,10 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 	public static function ezoic_verify_adstxt_redirect()
 	{
 		$cache_buster = '?v=' . time() . '&r=' . wp_rand(1000, 9999);
+		// Add adstxt_orig=1 for cloud integrated sites to bypass Ezoic and check original redirect
+		if (Ezoic_Integration_Admin::is_cloud_integrated()) {
+			$cache_buster .= '&adstxt_orig=1';
+		}
 		$ads_txt_url = home_url('/ads.txt' . $cache_buster);
 
 		$response = wp_remote_get($ads_txt_url, array(
@@ -180,23 +184,24 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 		}
 
 		$adstxtmanager_id = self::ezoic_adstxtmanager_id(true);
+
+		// Get status directly from option (bypasses static cache) since settings section callback may have just updated it
+		$adstxtmanager_status = get_option('ezoic_adstxtmanager_status');
+		if (!$adstxtmanager_status || !isset($adstxtmanager_status['status'])) {
+			$adstxtmanager_status = array('status' => false, 'error' => 'no_atm_id', 'message' => 'Please enter your ATM ID or enable auto-detection to set up ads.txt management.');
+		}
+
+		// Check if there was a detection error (only show errors, success cases handled below)
 		$detection_result = null;
-
-		// Run auto-detection if enabled
-		if (self::ezoic_adstxtmanager_auto_detect()) {
-			$detection_result = self::ezoic_detect_adstxtmanager_id();
+		if (self::ezoic_adstxtmanager_auto_detect() && isset($adstxtmanager_status['error']) && in_array($adstxtmanager_status['error'], array('connection_error', 'server_error', 'setup_failed', 'not_enabled'))) {
+			// Map status errors to detection result format for display
+			$detection_result = array('error' => $adstxtmanager_status['error'], 'message' => isset($adstxtmanager_status['message']) ? $adstxtmanager_status['message'] : '');
+			if (isset($adstxtmanager_status['code'])) {
+				$detection_result['code'] = $adstxtmanager_status['code'];
+			}
 		}
 
-		$adstxtmanager_id = self::ezoic_adstxtmanager_id(true);
-
-		// For manual ATM ID entries, verify redirect status
-		if (!self::ezoic_adstxtmanager_auto_detect() && !empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
-			$redirect_result = self::ezoic_verify_adstxt_redirect();
-			update_option('ezoic_adstxtmanager_status', $redirect_result);
-		}
-
-		$adstxtmanager_status = self::ezoic_adstxtmanager_status(true);
-		if (self::ezoic_adstxtmanager_auto_detect() && $detection_result && isset($detection_result['error'])) {
+		if ($detection_result && isset($detection_result['error'])) {
 			switch ($detection_result['error']) {
 				case 'connection_error':
 					$has_cdn_key = !empty(Ezoic_Cdn::ezoic_cdn_api_key());
@@ -236,19 +241,18 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 				<?php
 					break;
 			}
-		} elseif (self::ezoic_adstxtmanager_auto_detect() && $detection_result && isset($detection_result['success']) && $detection_result['success'] && !empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
+		}
+
+		// Show success or error messages for setups with an ATM ID
+		if (!empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
 			if (isset($adstxtmanager_status['status']) && $adstxtmanager_status['status'] === true) {
+				$view_url_param = substr(md5(mt_rand()), 0, 10);
+				if (Ezoic_Integration_Admin::is_cloud_integrated()) {
+					$view_url_param .= '&adstxt_orig=1';
+				}
 				?>
 				<div class="notice notice-success">
-					<p><strong>Success:</strong> Your ads.txt redirect is successfully set up.&nbsp;&nbsp;&nbsp;<a class="button button-info" href="/ads.txt?<?php echo substr(md5(mt_rand()), 0, 10); ?>" target="_blank">View Ads.txt</a></p>
-				</div>
-			<?php
-			}
-		} else if (!empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
-			if (isset($adstxtmanager_status['status']) && $adstxtmanager_status['status'] === true) {
-			?>
-				<div class="notice notice-success">
-					<p><strong>Success:</strong> Your ads.txt redirect is successfully set up.&nbsp;&nbsp;&nbsp;<a class="button button-info" href="/ads.txt?<?php echo substr(md5(mt_rand()), 0, 10); ?>" target="_blank">View Ads.txt</a></p>
+					<p><strong>Success:</strong> Your ads.txt redirect is successfully set up.&nbsp;&nbsp;&nbsp;<a class="button button-info" href="/ads.txt?<?php echo $view_url_param; ?>" target="_blank">View Ads.txt</a></p>
 				</div>
 				<?php
 			} else if (isset($adstxtmanager_status['status']) && $adstxtmanager_status['status'] === false) {
@@ -282,7 +286,7 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 
 	public static function ezoic_should_show_adstxtmanager_setting()
 	{
-		if (!Ezoic_Integration_Admin::is_cloud_integrated() || Ezoic_Integration_Admin::is_javascript_integrated()) {
+		if (!Ezoic_Integration_Admin::is_cloud_integrated() || Ezoic_Integration_Admin::is_javascript_integrated() || get_option('ezoic_js_integration_enabled', false)) {
 			return true;
 		}
 
@@ -293,13 +297,8 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 	{
 		static $adstxtmanager_status = null;
 		if (is_null($adstxtmanager_status) || $refresh) {
-			// Use cached status from WordPress options instead of checking redirect on every call
-			$cached_status = get_option('ezoic_adstxtmanager_status');
-			if ($cached_status && isset($cached_status['status'])) {
-				$adstxtmanager_status = $cached_status;
-			} else {
-				// Fallback: if no cached status, check redirect (happens on first setup)
-				$adstxtmanager_status = array();
+			// If refresh requested, skip cache and check redirect directly
+			if ($refresh) {
 				$adstxtmanager_id = self::ezoic_adstxtmanager_id(true);
 
 				if (!empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
@@ -307,6 +306,23 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 					$adstxtmanager_status = $redirect_result;
 				} else {
 					$adstxtmanager_status = array('status' => false, 'error' => 'no_atm_id', 'message' => 'Please enter your ATM ID or enable auto-detection to set up ads.txt management.');
+				}
+			} else {
+				// Use cached status from WordPress options instead of checking redirect on every call
+				$cached_status = get_option('ezoic_adstxtmanager_status');
+				if ($cached_status && isset($cached_status['status'])) {
+					$adstxtmanager_status = $cached_status;
+				} else {
+					// Fallback: if no cached status, check redirect (happens on first setup)
+					$adstxtmanager_status = array();
+					$adstxtmanager_id = self::ezoic_adstxtmanager_id(true);
+
+					if (!empty($adstxtmanager_id) && $adstxtmanager_id > 0) {
+						$redirect_result = self::ezoic_verify_adstxt_redirect();
+						$adstxtmanager_status = $redirect_result;
+					} else {
+						$adstxtmanager_status = array('status' => false, 'error' => 'no_atm_id', 'message' => 'Please enter your ATM ID or enable auto-detection to set up ads.txt management.');
+					}
 				}
 			}
 		}

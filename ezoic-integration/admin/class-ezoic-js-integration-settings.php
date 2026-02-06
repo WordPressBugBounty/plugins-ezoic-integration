@@ -36,6 +36,9 @@ class Ezoic_JS_Integration_Settings
 			update_option('ezoic_js_integration_options', $default_array);
 		}
 
+		// Auto-fetch placeholders if WP placeholders enabled but none exist
+		$this->auto_fetch_missing_placeholders();
+
 		add_settings_section(
 			'ezoic_js_integration_section',
 			__('JavaScript Integration Settings', 'ezoic'),
@@ -162,7 +165,6 @@ class Ezoic_JS_Integration_Settings
 		echo $html;
 	}
 
-
 	/**
 	 * Handle disabling JavaScript integration
 	 */
@@ -224,15 +226,25 @@ class Ezoic_JS_Integration_Settings
 
 		// Check if WP placeholders setting was just enabled
 		$wp_placeholders_just_enabled =
-			!isset($current_options['js_use_wp_placeholders']) ||
-			!$current_options['js_use_wp_placeholders'] &&
-			$sanitized['js_use_wp_placeholders'];
+			(!isset($current_options['js_use_wp_placeholders']) || !$current_options['js_use_wp_placeholders'])
+			&& $sanitized['js_use_wp_placeholders'];
 
-		// If WP placeholders were just enabled and JS integration is active, force generate placeholders
-		if ($wp_placeholders_just_enabled && get_option('ezoic_js_integration_enabled', false)) {
+		// Check if JS integration with WP placeholders is enabled but no placeholders exist
+		$js_enabled = get_option('ezoic_js_integration_enabled', false);
+		$needs_placeholders = false;
+		if ($js_enabled && $sanitized['js_use_wp_placeholders']) {
+			$adtester = new Ezoic_AdTester();
+			$needs_placeholders = empty($adtester->config->placeholders);
+		}
+
+		// Force generate placeholders if just enabled OR if enabled but missing placeholders
+		if (($wp_placeholders_just_enabled && $js_enabled) || $needs_placeholders) {
 			try {
-				$adtester = new Ezoic_AdTester();
+				if (!isset($adtester)) {
+					$adtester = new Ezoic_AdTester();
+				}
 				$adtester->force_generate_placeholders();
+				$adtester->initialize_config();
 			} catch (\Exception $e) {
 				Ezoic_Integration_Logger::log_exception($e, 'JS Integration Settings');
 			}
@@ -260,6 +272,48 @@ class Ezoic_JS_Integration_Settings
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Auto-fetch placeholders if WP placeholders is enabled but none exist
+	 */
+	private function auto_fetch_missing_placeholders()
+	{
+		// Only run on Ezoic plugin pages
+		$current_page = isset($_GET['page']) ? $_GET['page'] : '';
+		if ($current_page !== EZOIC__PLUGIN_SLUG) {
+			return;
+		}
+
+		$js_enabled = get_option('ezoic_js_integration_enabled', false);
+		if (!$js_enabled) {
+			return;
+		}
+
+		$options = get_option('ezoic_js_integration_options', array());
+		$use_wp_placeholders = isset($options['js_use_wp_placeholders']) && $options['js_use_wp_placeholders'];
+
+		if (!$use_wp_placeholders) {
+			return;
+		}
+
+		try {
+			$adtester = new Ezoic_AdTester();
+			if (empty($adtester->config->placeholders)) {
+				// Respect 5-minute cooldown
+				$last_fetch = $adtester->config->last_placeholder_fetch;
+				if (isset($last_fetch) && ($last_fetch + 5 * 60) > time()) {
+					return;
+				}
+
+				$adtester->force_generate_placeholders();
+				$adtester->initialize_config();
+				$adtester->config->last_placeholder_fetch = time();
+				Ezoic_AdTester_Config::store($adtester->config);
+			}
+		} catch (\Exception $e) {
+			Ezoic_Integration_Logger::log_exception($e, 'JS Integration Settings - Auto Fetch');
+		}
 	}
 
 	/**
@@ -380,7 +434,6 @@ class Ezoic_JS_Integration_Settings
 		return $all_scripts['privacy'];
 	}
 
-
 	/**
 	 * Check if any duplicate scripts (SA or privacy) are detected
 	 *
@@ -496,7 +549,6 @@ class Ezoic_JS_Integration_Settings
 <?php
 		}
 	}
-
 
 	/**
 	 * Auto-detect and setup ads.txt redirect when JavaScript integration is enabled

@@ -284,7 +284,7 @@ class Ezoic_Integration_Logger
 				}
 
 				var found = foundMethods.length > 0;
-				var matchDetails = found ? ' (found via: ' + foundMethods.join(', ') + ')' : '';
+				var matchDetails = found ? ' (' + foundMethods.join(', ') + ')' : '';
 
 				if (!window.ezJsDebug) window.ezJsDebug = [];
 				window.ezJsDebug.push({

@@ -111,6 +111,13 @@ class Ezoic_AdsTxtManager_Settings
 		// Run auto-detection if enabled
 		if (Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect()) {
 			Ezoic_AdsTxtManager::ezoic_detect_adstxtmanager_id();
+		} else {
+			// For manual setups, verify redirect status on settings page load
+			$atm_id = Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true);
+			if (!empty($atm_id) && $atm_id > 0) {
+				$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
+				update_option('ezoic_adstxtmanager_status', $redirect_result);
+			}
 		}
 ?>
 		<?php if (Ezoic_AdsTxtManager::ezoic_adstxtmanager_id(true) == 0 && !Ezoic_AdsTxtManager::ezoic_adstxtmanager_auto_detect()) : ?>

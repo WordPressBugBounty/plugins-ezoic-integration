@@ -91,6 +91,11 @@ class Ezoic_AdTester_Config
 	 */
 	public static function load()
 	{
+		// Safety check - ensure WordPress functions are available
+		if (!function_exists('get_option')) {
+			return new Ezoic_AdTester_Config();
+		}
+
 		// Fetch configuration from storage
 		$encoded = \get_option('ez_adtester_config');
 
@@ -107,6 +112,14 @@ class Ezoic_AdTester_Config
 
 		// Upgrade if needed
 		Ezoic_AdTester_Config::upgrade($config);
+
+		if (isset($config->skip_word_count) && \is_string($config->skip_word_count)) {
+			$config->skip_word_count = \intval($config->skip_word_count);
+		}
+
+		if (!isset($config->skip_word_count) || $config->skip_word_count < 0) {
+			$config->skip_word_count = 10;
+		}
 
 		return $config;
 	}
@@ -302,7 +315,8 @@ class Ezoic_AdTester_Config
 				$active_position_id = $this->get_active_placement($position_type);
 
 				// Keep config only if it's for the active placement or no active placement is set
-				if (!$active_position_id || $placeholder->position_id == $active_position_id) {
+				// Use strict integer comparison to ensure proper matching
+				if (!$active_position_id || intval($placeholder->position_id) === intval($active_position_id)) {
 					$cleaned_configs[] = $ph_config;
 				}
 			} else {
@@ -312,6 +326,9 @@ class Ezoic_AdTester_Config
 		}
 
 		$this->placeholder_config = $cleaned_configs;
+
+		// Clear the cached filtered rules so they get rebuilt with the cleaned configs
+		$this->filtered_placeholder_rules = array();
 	}
 
 	/**

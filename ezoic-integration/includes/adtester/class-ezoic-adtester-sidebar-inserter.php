@@ -33,7 +33,7 @@ class Ezoic_AdTester_Sidebar_Inserter extends Ezoic_AdTester_Inserter
 
 		// Attempt to find the correct sidebar, based on configurable id
 		if (!array_key_exists($this->config->sidebar_id, $sidebars) || !is_array($sidebars[$this->config->sidebar_id]) || count($sidebars[$this->config->sidebar_id]) === 0) {
-			Ezoic_Integration_Logger::console_debug("Sidebar inserter exit: sidebar '{$this->config->sidebar_id}' not found or empty", 'Sidebar Ads');
+			Ezoic_Integration_Logger::console_debug("Sidebar inserter exit: sidebar '{$this->config->sidebar_id}' not found or empty", 'Sidebar Ads', 'warn');
 			return;
 		}
 
@@ -178,7 +178,7 @@ class Ezoic_AdTester_Sidebar_Inserter extends Ezoic_AdTester_Inserter
 					Ezoic_Integration_Logger::console_debug(
 						"Sidebar placement skipped - wanted position {$rule_idx} but only {$widget_counter} widgets exist. Position type {$remaining_rule->position_type} not allowed at end.",
 						'Sidebar Ads',
-						'warning',
+						'warn',
 						$remaining_rule->position_id
 					);
 				}

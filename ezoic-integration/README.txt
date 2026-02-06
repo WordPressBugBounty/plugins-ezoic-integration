@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, revenue, optimization, ad testing, saas, analytics, video
 Requires at least: 5.2.0
-Tested up to: 6.8.2
+Tested up to: 6.9
 Requires PHP: 5.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -110,45 +110,35 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
-= 2.19.7 =
-* Integration conflict detection
+= 2.22.2 =
+* Minor bug fixes and enhancements
 
-= 2.19.6 =
+= 2.22.1 =
+* Bug fixes and improved placeholder initialization
+
+= 2.22.0 =
+* Improved plugin performance and stability
+
+= 2.21.4 =
+* Bug fixes and stability improvements
+
+= 2.21.3 =
 * Minor bug fixes
 
-= 2.19.5 =
-* Added script conflict detection and warnings
+= 2.21.2 =
 * Minor bug fixes
 
-= 2.19.3 =
+= 2.21.1 =
 * Minor bug fixes
 
-= 2.19.2 =
-* Improved ad initialization process
+= 2.21.0 =
+* Ad placement enhancements
 
-= 2.19.1 =
-* Minor bug fixes
+= 2.20.2 =
+* Fixed User Targeting role-based ad exclusions
 
-= 2.19.0 =
-* Enhance ad insertion systems
-* Minor bug fixes
+= 2.20.1 =
+* Improved plugin configuration and setup
 
-= 2.18.3 =
-* Minor bug fixes
-
-= 2.18.0 =
-* Improved ad placement accuracy and reliability
-* Enhanced logging and error handling
-
-= 2.17.3 =
-* Improve ad placement logic to prevent duplicates
-
-= 2.17.2 =
-* Improved backend performance and data efficiency
-* Bug fixes and feature enhancements
-
-= 2.17.1 =
-* Fixed placeholder generation bug
-
-= 2.17.0 =
-* Enhanced JavaScript integration and improved Ads.txt setup validation
+= 2.20.0 =
+* Improved ads.txt setup for JavaScript transition

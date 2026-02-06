@@ -321,6 +321,9 @@ class Ezoic_Integration_Ad_Settings
 
 		// Store config
 		$this->adtester->update_config();
+
+		// Regenerate placeholders after reset
+		$this->adtester->force_generate_placeholders();
 	}
 
 	/**

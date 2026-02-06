@@ -22,11 +22,21 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 
 		// Sort rules by paragraph number
 		\usort($rules, function ($a, $b) {
-			if ((int) $a->display_option < (int) $b->display_option) {
-				return -1;
-			} else {
-				return 1;
+			$a_pos = (int) $a->display_option;
+			$b_pos = (int) $b->display_option;
+
+			if ($a_pos !== $b_pos) {
+				return $a_pos < $b_pos ? -1 : 1;
 			}
+
+			// For the same paragraph, insert "before" first to avoid offset collisions
+			$a_before = ($a->display === 'before_paragraph');
+			$b_before = ($b->display === 'before_paragraph');
+			if ($a_before !== $b_before) {
+				return $a_before ? -1 : 1;
+			}
+
+			return 0;
 		});
 
 		// Insert placeholders
@@ -34,13 +44,24 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 			if ($rule->display != 'disabled') {
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
+				// Skip if this placement has already been inserted on this page
+				if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - already inserted on this page.",
+						'Content Ads',
+						'info',
+						$placeholder->position_id
+					);
+					continue;
+				}
+
 				// Skip if this placeholder already exists in content
 				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
 					Ezoic_Integration_Logger::console_debug(
 						"Placement skipped - placeholder already exists in content.",
 						'Content Ads',
 						'info',
-						$rule->placeholder_id
+						$placeholder->position_id
 					);
 					continue;
 				}
@@ -87,6 +108,10 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 		$position = $paragraph_pos[$placement_paragraph - 1];
 		$content = \ez_substr_replace($content, $placeholder_markup, $position + $this->position_offset);
 		$this->position_offset += $placeholder_markup_len;
+
+		// Mark placement as inserted
+		Ezoic_AdTester::mark_placement_inserted($placeholder->position_id);
+		Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 
 		return $content;
 	}
