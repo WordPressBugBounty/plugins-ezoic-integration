@@ -347,6 +347,9 @@ class Ezoic_Integration_Public
 			return;
 		}
 
+		// Always inject analytics script when JS integration is enabled
+		$this->loader->add_action('wp_head', $this, 'inject_ezoic_analytics_script', 1);
+
 		$js_options = get_option('ezoic_js_integration_options');
 		$is_preview_mode = $this->is_js_preview_mode();
 
@@ -405,6 +408,25 @@ class Ezoic_Integration_Public
 		// Initialize ezstandalone
 		echo '<script data-ezoic="1"' . $litespeed_attr . '>window.ezstandalone = window.ezstandalone || {};';
 		echo 'ezstandalone.cmd = ezstandalone.cmd || [];</script>' . "\n";
+	}
+
+	/**
+	 * Inject Ezoic analytics script unconditionally when JS integration is enabled
+	 */
+	public function inject_ezoic_analytics_script()
+	{
+		if ($this->is_admin_context()) {
+			return;
+		}
+
+		$js_enabled = get_option('ezoic_js_integration_enabled', false);
+		if (!$js_enabled) {
+			return;
+		}
+
+		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+
+		echo '<script src="' . EZOIC_ANALYTICS_SCRIPT_URL . '"' . $litespeed_attr . '></script>' . "\n";
 	}
 
 	/**

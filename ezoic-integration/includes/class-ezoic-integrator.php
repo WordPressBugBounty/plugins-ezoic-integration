@@ -34,12 +34,15 @@ class Ezoic_Integrator
 		//Get Orig Content
 		$orig_content = $this->ez_content_collector->get_orig_content();
 
+		// Safety: preserve original content in case middleware produces blank output
+		$saved_orig = $orig_content;
+
 		if (isset($_GET[$this->ez_bust_endpoint_cache_param]) && $_GET[$this->ez_bust_endpoint_cache_param] == "1") {
 			$this->ez_endpoints->bust_endpoint_cache();
 		}
 
 		if ($this->ez_filter->we_should_return_orig()) {
-			//Do nothing this should just return our final content
+			// return original content unmodified
 		} elseif ($this->ez_endpoints->is_ezoic_endpoint()) {
 			$orig_content = $this->ez_endpoints->get_endpoint_asset();
 		} else {
@@ -80,6 +83,12 @@ class Ezoic_Integrator
 				$amp_request = new Ezoic_Amp_Validation($orig_content);
 				$orig_content = $amp_request->fix_amp_validation();
 			}*/
+		}
+
+		// Never output a blank page — fall back to original content if middleware produced empty result
+		if (strlen(trim($orig_content)) === 0 && strlen(trim($saved_orig)) > 0) {
+			//error_log('Ezoic WARNING: middleware produced blank output, falling back to original content (saved_orig length=' . strlen($saved_orig) . ')');
+			$orig_content = $saved_orig;
 		}
 
 		// Remove white space from front and back of html/xml content to prevent xml errors on map

@@ -23,6 +23,11 @@ class Ezoic_Integration_WP_Request implements iEzoic_Integration_Request {
 		//Create proper request data structure
 		$request = $this->get_ezoic_request ($cache_key,  $available_templates );
 
+		// If request building failed (e.g. $wp not available), return error instead of sending incomplete request
+		if ( empty($request) ) {
+			return new \WP_Error('ezoic_request_failed', 'Could not build ezoic request');
+		}
+
 		//Attempt to retrieve cached content
 		$response = $this->get_cached_content_ezoic_response( $request );
 
@@ -52,15 +57,21 @@ class Ezoic_Integration_WP_Request implements iEzoic_Integration_Request {
 	}
 
 	private function non_valid_cached_content( $result ) {
+		if ( !is_array($result) || !isset($result['response']['code']) ) {
+			return true;
+		}
 		return ($result['response']['code'] == 404 || $result['response']['code'] == 400);
 	}
 
 	private function get_ezoic_request( $cache_key,  $available_templates ) {
 		global $wp;
 		if ( !isset( $_SERVER['QUERY_STRING'] ) ) {
-			return;
+			return array();
 		}
 
+		if ( !isset($wp) || !is_object($wp) ) {
+			return array();
+		}
 
 		//Form current url
 		$home_url = home_url( $wp->request );

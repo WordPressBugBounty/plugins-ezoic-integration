@@ -157,6 +157,10 @@ class Ezoic_Integration_WP_Filter implements iEzoic_Integration_Filter {
 			return true;
 		}
 
+		if ( preg_match('/\/ads\.txt/', $current_url) ) {
+			return true;
+		}
+
 		return false;
 	}
 }

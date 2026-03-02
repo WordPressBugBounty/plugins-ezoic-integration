@@ -177,7 +177,9 @@ class Ezoic_Integration_Cache_Endpoints implements iEzoic_Integration_Endpoints 
 		$ez_data = json_decode( $response_body );
 		if ( isset( $ez_data ) && $ez_data->result === "true" ) {
 			foreach ( $ez_data->endpoints as $endpoint ) {
-				$this->endpoints[] = $endpoint;
+				if ( $endpoint !== '' ) {
+					$this->endpoints[] = $endpoint;
+				}
 			}
 		}
 	}
@@ -294,7 +296,7 @@ class Ezoic_Integration_Cache_Endpoints implements iEzoic_Integration_Endpoints 
 					return false;
 				}
 				$this->endpoints = $content["endpoints"];
-
+	
 				return true;
 			}
 		}

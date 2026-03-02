@@ -3,7 +3,6 @@ namespace Ezoic_Namespace;
 
 require_once( dirname( __FILE__ ) . '/interface-ezoic-integration-response.php');
 
-
 class Ezoic_Integration_WP_Response implements iEzoic_Integration_Response {
 	private $ez_headers;
 
@@ -27,11 +26,9 @@ class Ezoic_Integration_WP_Response implements iEzoic_Integration_Response {
 			$this->ez_headers = wp_remote_retrieve_headers( $response );
 			$this->alter_response_headers();
 
-			//Replace final content with ezoic content
-			if( is_array($response) && isset($response['body']) ) {
+			//Replace final content with ezoic content only if body is non-empty
+			if( is_array($response) && isset($response['body']) && strlen(trim($response['body'])) > 0 ) {
 				$final = $response['body'];
-			} else {
-				$final = $response;
 			}
 
 		} else {

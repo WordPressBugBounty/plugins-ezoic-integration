@@ -4,7 +4,6 @@ namespace Ezoic_Namespace;
 
 class Ezoic_Wp_Integration extends Ezoic_Feature
 {
-
 	public function __construct()
 	{
 		$this->is_public_enabled = true;
@@ -38,13 +37,17 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 
 	public function ez_buffer_end()
 	{
-		//if(ob_get_level() > 0) {
-		$ezoic_factory    = new Ezoic_Integration_Factory();
-		$ezoic_integrator = $ezoic_factory->new_ezoic_integrator(Ezoic_Cache_Type::NO_CACHE);
-		$ezoic_integrator->apply_ezoic_middleware();
-		//} else {
-		//echo "<!--buffer end-->";
-		//}
+		try {
+			$ezoic_factory    = new Ezoic_Integration_Factory();
+			$ezoic_integrator = $ezoic_factory->new_ezoic_integrator(Ezoic_Cache_Type::NO_CACHE);
+			$ezoic_integrator->apply_ezoic_middleware();
+		} catch (\Throwable $e) {
+			// Middleware crashed — flush any remaining buffers so the site is never blank
+			while (ob_get_level() > 0) {
+				ob_end_flush();
+			}
+			error_log('Ezoic middleware error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+		}
 	}
 
 	private function should_enable_full_ob()
@@ -66,8 +69,8 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 		$integration_opt = \get_option('ezoic_integration_options');
 
 		if (is_array($integration_opt) && ! isset($integration_opt['disable_wp_integration'])) {
-			// enable default wp integration for legacy versions
-			$integration_opt['disable_wp_integration'] = 0;
+			// default to disabled — require explicit opt-in
+			$integration_opt['disable_wp_integration'] = 1;
 		}
 
 		$integration_enabled = isset($integration_opt) && \is_array($integration_opt) && $integration_opt['disable_wp_integration'] == 0;
@@ -120,6 +123,10 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 		}
 
 		if (preg_match('/sitemap(.*)\.xml/', $current_url)) {
+			return true;
+		}
+
+		if (preg_match('/\/ads\.txt/', $current_url)) {
 			return true;
 		}
 

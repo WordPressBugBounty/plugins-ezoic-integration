@@ -689,7 +689,7 @@ class Ezoic_Integration_Renderer {
 			$results['result']      = true;
 		} elseif ( ( isset( $ezoic_options['disable_wp_integration'] ) && ! $ezoic_options['disable_wp_integration'] ) && strpos(
 			$contents,
-			'This site is operated by Ezoic and WordPress Integrated'
+			'This site is operated by Ezoic and Wordpress Integrated'
 		) !== false ) {
 			$results['integration'] = 'wp';
 			$results['result']      = true;
