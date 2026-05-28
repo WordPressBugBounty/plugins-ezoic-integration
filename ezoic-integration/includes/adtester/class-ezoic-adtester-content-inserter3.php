@@ -6,7 +6,7 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 {
 	public function __construct($config)
 	{
-		if (explode('.', PHP_VERSION) >= 8) {
+		if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
 			require_once(dirname(__FILE__) . '/../vendor/phpQuery_8.php');
 		} else {
 			require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
@@ -70,6 +70,15 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 		foreach ($nodes as $node) {
 			if (isset($ruleMap[$nodeIdx])) {
 				$insertion_rule = $ruleMap[$nodeIdx];
+				if (!isset($this->config->placeholders[$insertion_rule->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$insertion_rule->placeholder_id}' not found in config.",
+						'Content Ads',
+						'warn'
+					);
+					$nodeIdx++;
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$insertion_rule->placeholder_id];
 
 				// Skip if this placement has already been inserted on this page

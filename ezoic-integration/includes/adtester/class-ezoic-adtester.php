@@ -1166,19 +1166,20 @@ class Ezoic_AdTester extends Ezoic_Feature {
 	 * of a user role that has ads disabled for them.
 	 */
 	public function set_no_ads_cookie() {
-		$cookieName = 'x-ez-wp-noads';
+		$cookieName   = 'x-ez-wp-noads';
+		$cookiePath   = defined( 'COOKIEPATH' ) ? COOKIEPATH : '/';
+		$cookieDomain = defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : '';
+		$secure       = is_ssl();
 
-		// If a user has ads disabled, set the cookie.
 		if ( $this->user_has_ads_disabled() ) {
-			// If the cookie doesn't exist create the cookie
-			// 0 means a cookie expires at the end of the session (when the browser closes)
-			if ( ! isset( $_COOKIE[ $cookieName ] ) ) {
-				setcookie( $cookieName, '1', 0 );
+			if ( ! isset( $_COOKIE[ $cookieName ] ) || $_COOKIE[ $cookieName ] !== '1' ) {
+				setcookie( $cookieName, '1', 0, $cookiePath, $cookieDomain, $secure, true );
 			}
+			$_COOKIE[ $cookieName ] = '1';
 		} else {
-			// If the cookie exists delete the cookie by setting the expire date-time to 1 in UNIX time
-			if ( isset( $_COOKIE[ $cookieName ] ) ) {
-				setcookie( $cookieName, '0', 1 );
+			if ( isset( $_COOKIE[ $cookieName ] ) && $_COOKIE[ $cookieName ] === '1' ) {
+				setcookie( $cookieName, '0', time() - 3600, $cookiePath, $cookieDomain, $secure, true );
+				$_COOKIE[ $cookieName ] = '0';
 			}
 		}
 	}
@@ -1195,17 +1196,14 @@ class Ezoic_AdTester extends Ezoic_Feature {
 
 		if (
 			! isset( $this->config->user_roles_with_ads_disabled )
+			|| empty( $this->config->user_roles_with_ads_disabled )
 			|| ! isset( wp_get_current_user()->roles )
 		) {
 			return false;
 		}
 
-		// Make sure we compare equivalent role names
 		$currentUserRoles         = array_map( 'strtolower', wp_get_current_user()->roles );
 		$userRolesWithAdsDisabled = array_map( 'strtolower', $this->config->user_roles_with_ads_disabled );
-
-		// array_diff() returns the values in the first array that are not present in the second array,
-		// so if array_diff() returns a shorter array then $currentUserRoles there's a match in the arrays.
 		$diff = array_diff( $currentUserRoles, $userRolesWithAdsDisabled );
 
 		return \count( $currentUserRoles ) != \count( $diff );

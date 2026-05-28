@@ -493,23 +493,23 @@ class Ezoic_Integration_Ad_Settings
 		}
 		// Properly format config so the editor can deserialize it
 		$excerptTags = '[]';
-		if (isset($this->adtester->config->excerpt_tags)) {
-			$excerptTags = '["' . implode('","', $this->adtester->config->excerpt_tags) . '"]';
+		if (isset($this->adtester->config->excerpt_tags) && is_array($this->adtester->config->excerpt_tags)) {
+			$excerptTags = \json_encode($this->adtester->config->excerpt_tags);
 		}
 
 		$paragraphTags = '[]';
-		if (isset($this->adtester->config->paragraph_tags)) {
-			$paragraphTags = '["' . implode('","', $this->adtester->config->paragraph_tags) . '"]';
+		if (isset($this->adtester->config->paragraph_tags) && is_array($this->adtester->config->paragraph_tags)) {
+			$paragraphTags = \json_encode($this->adtester->config->paragraph_tags);
 		}
 
 		$excludeClasses = '[]';
-		if (isset($this->adtester->config->exclude_class_list)) {
-			$excludeClasses = '["' . implode('","', $this->adtester->config->exclude_class_list) . '"]';
+		if (isset($this->adtester->config->exclude_class_list) && is_array($this->adtester->config->exclude_class_list)) {
+			$excludeClasses = \json_encode($this->adtester->config->exclude_class_list);
 		}
 
 		$excludeParents = '[]';
-		if (isset($this->adtester->config->parent_filters)) {
-			$excludeParents = '["' . implode('","', $this->adtester->config->parent_filters) . '"]';
+		if (isset($this->adtester->config->parent_filters) && is_array($this->adtester->config->parent_filters)) {
+			$excludeParents = \json_encode($this->adtester->config->parent_filters);
 		}
 
 		$excludeWordCount = isset($this->adtester->config->skip_word_count) && $this->adtester->config->skip_word_count !== null ? $this->adtester->config->skip_word_count : 10;
@@ -526,18 +526,19 @@ class Ezoic_Integration_Ad_Settings
 
 		$placeholderArray = array();
 		foreach ($this->adtester->config->placeholders as $placeholder) {
-			$revenue = 'null';
+			$revenue = null;
 			if (isset($this->adtester->revenues[$placeholder->position_id]->revenue_percentage)) {
 				$revenue = $this->adtester->revenues[$placeholder->position_id]->revenue_percentage;
 			}
 
 			// Always send the original Position ID to frontend - let frontend handle filtering
-			$placeholderArray[] =
-				'{"id":' . $placeholder->id
-				. ',"positionId":"' . $placeholder->position_id . '"'
-				. ',"positionType":"' . $placeholder->position_type
-				. '","name":"' . $placeholder->name
-				. '","revenue":' . $revenue . '}';
+			$placeholderArray[] = array(
+				'id' => $placeholder->id,
+				'positionId' => $placeholder->position_id,
+				'positionType' => $placeholder->position_type,
+				'name' => $placeholder->name,
+				'revenue' => $revenue
+			);
 		}
 
 		$excludeUrls = '[]';
@@ -732,23 +733,21 @@ class Ezoic_Integration_Ad_Settings
 						"hasOption": true
 					}]
 				}],
-				"placeholderConfig": [
-					<?php
-
-					$configArray = array();
-					if (!empty($this->adtester->config->placeholder_config)) {
-						foreach ($this->adtester->config->placeholder_config as $config) {
-							$configArray[] = '{"pageType":"' . $config->page_type . '","placeholderId":' . $config->placeholder_id . ',"display":"' . $config->display . '","displayOption":"' . addslashes($config->display_option) . '"}';
-						}
-
-						echo implode(',', $configArray);
+			"placeholderConfig": <?php
+				$configArray = array();
+				if (!empty($this->adtester->config->placeholder_config)) {
+					foreach ($this->adtester->config->placeholder_config as $config) {
+						$configArray[] = array(
+							'pageType' => $config->page_type,
+							'placeholderId' => $config->placeholder_id,
+							'display' => $config->display,
+							'displayOption' => $config->display_option
+						);
 					}
-
-					?>
-				],
-				"placeholders": [
-					<?php echo implode(',', $placeholderArray); ?>
-				],
+				}
+				echo \json_encode($configArray);
+			?>,
+				"placeholders": <?php echo \json_encode($placeholderArray); ?>,
 				"revenues": <?php echo \json_encode($this->adtester->revenues); ?>,
 				"general": {
 					"activePlacements": <?php echo \json_encode($this->adtester->config->active_placements) ?>,
@@ -839,8 +838,6 @@ class Ezoic_Integration_Ad_Settings
 	{
 		global $wp_roles;
 
-		// If $wp_roles doesn't exist for some reason
-		// return an empty array
 		if (
 			!isset($wp_roles)
 			|| !isset($wp_roles->role_names)
@@ -848,10 +845,17 @@ class Ezoic_Integration_Ad_Settings
 			return array();
 		}
 
-		// Clone role names into a new array because we don't
-		// want to change the original array when we sort it
-		$userRoles = \array_merge(array(), $wp_roles->role_names);
-		\sort($userRoles);
+		$userRoles = array();
+		foreach ($wp_roles->role_names as $slug => $displayName) {
+			$userRoles[] = array(
+				'value' => $slug,
+				'text'  => $displayName,
+			);
+		}
+
+		\usort($userRoles, function ($a, $b) {
+			return \strcmp($a['text'], $b['text']);
+		});
 
 		return $userRoles;
 	}

@@ -42,6 +42,14 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 		// Insert placeholders
 		foreach ($rules as $rule) {
 			if ($rule->display != 'disabled') {
+				if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+						'Content Ads',
+						'warn'
+					);
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
 				// Skip if this placement has already been inserted on this page
@@ -101,7 +109,7 @@ class Ezoic_AdTester_Content_Inserter extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
-		if ($placement_paragraph == -1 || $placement_paragraph > \count($paragraph_pos)) {
+		if ($placement_paragraph < 1 || $placement_paragraph > \count($paragraph_pos)) {
 			return $content;
 		}
 

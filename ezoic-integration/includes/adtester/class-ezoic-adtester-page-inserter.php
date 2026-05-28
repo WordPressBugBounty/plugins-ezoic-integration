@@ -22,6 +22,14 @@ class Ezoic_AdTester_Page_Inserter extends Ezoic_AdTester_Inserter
 		// Insert placeholders
 		foreach ($rules as $rule) {
 			if ($rule->display != 'disabled') {
+				if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+						'Page Ads',
+						'warn'
+					);
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
 				if ($rule->display === $insert_position) {

@@ -17,6 +17,7 @@ require_once( dirname( __FILE__ ) . '/adpos/ezoic-adpos-classes.php' );
 
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-request-utils.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-authentication.php');
+require_once( dirname( __FILE__ ) . '/class-ezoic-integration-privacy-config.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-curl-request.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-curl-response.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-filter.php');

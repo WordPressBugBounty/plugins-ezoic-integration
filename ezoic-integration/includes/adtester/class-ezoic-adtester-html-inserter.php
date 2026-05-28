@@ -15,6 +15,14 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 
 		foreach ($this->config->placeholder_config as $ph_config) {
 			if ($ph_config->page_type == $this->page_type && ($ph_config->display == 'before_element' || $ph_config->display == 'after_element')) {
+				if (!isset($this->config->placeholders[$ph_config->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$ph_config->placeholder_id}' not found in config.",
+						'HTML Ads',
+						'warn'
+					);
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$ph_config->placeholder_id];
 
 				if (Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder, true)) {
@@ -230,6 +238,14 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 
 		foreach ($rules as $rule) {
 			$nodes = @\pq($rule->display_option, $doc);
+			if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+				Ezoic_Integration_Logger::console_debug(
+					"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+					'HTML Ads',
+					'warn'
+				);
+				continue;
+			}
 			$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
 			if (count($nodes) === 0) {

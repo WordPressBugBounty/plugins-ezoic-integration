@@ -121,6 +121,15 @@ class Ezoic_AdTester_Config
 			$config->skip_word_count = 10;
 		}
 
+		if (isset($config->user_roles_with_ads_disabled) && !empty($config->user_roles_with_ads_disabled)) {
+			$original   = $config->user_roles_with_ads_disabled;
+			$normalized = self::normalize_role_slugs($original);
+			if ($original !== $normalized) {
+				$config->user_roles_with_ads_disabled = $normalized;
+				self::store($config);
+			}
+		}
+
 		return $config;
 	}
 
@@ -329,6 +338,41 @@ class Ezoic_AdTester_Config
 
 		// Clear the cached filtered rules so they get rebuilt with the cleaned configs
 		$this->filtered_placeholder_rules = array();
+	}
+
+	/**
+	 * Converts legacy display-name role values (e.g. "Editor") to WordPress
+	 * role slugs (e.g. "editor"). Idempotent — safe to call on every load.
+	 */
+	public static function normalize_role_slugs($roles)
+	{
+		$wp_roles_obj = function_exists('wp_roles') ? wp_roles() : null;
+
+		if (!$wp_roles_obj || !isset($wp_roles_obj->role_names) || !is_array($roles)) {
+			return $roles;
+		}
+
+		$display_to_slug = array();
+		foreach ($wp_roles_obj->role_names as $slug => $name) {
+			$display_to_slug[strtolower($name)] = $slug;
+		}
+
+		$normalized = array();
+		foreach ($roles as $role) {
+			$lower = strtolower($role);
+
+			if (isset($wp_roles_obj->role_names[$role])) {
+				$normalized[] = $role;
+			} elseif (isset($wp_roles_obj->role_names[$lower])) {
+				$normalized[] = $lower;
+			} elseif (isset($display_to_slug[$lower])) {
+				$normalized[] = $display_to_slug[$lower];
+			} else {
+				$normalized[] = $role;
+			}
+		}
+
+		return \array_values(\array_unique($normalized));
 	}
 
 	/**

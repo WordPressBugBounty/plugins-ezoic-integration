@@ -108,6 +108,14 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		$any_marked_inserted = false;
 		foreach ($rules as $rule) {
 			if ($rule->display != 'disabled') {
+				if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+						'Content Ads',
+						'warn'
+					);
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 				if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
 					$any_marked_inserted = true;
@@ -123,6 +131,14 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 			$all_marked_placements_present = true;
 			foreach ($rules as $rule) {
 				if ($rule->display != 'disabled') {
+					if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+						Ezoic_Integration_Logger::console_debug(
+							"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+							'Content Ads',
+							'warn'
+						);
+						continue;
+					}
 					$placeholder = $this->config->placeholders[$rule->placeholder_id];
 					if (Ezoic_AdTester::is_placement_inserted($placeholder->position_id)) {
 						// This placement is marked as inserted, verify it exists in content
@@ -169,9 +185,17 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 
 		// Insert placeholders
 		foreach ($rules as $rule) {
-			if ($rule->display != 'disabled') {
-				$placeholder = $this->config->placeholders[$rule->placeholder_id];
+			if (!isset($this->config->placeholders[$rule->placeholder_id])) {
+				Ezoic_Integration_Logger::console_debug(
+					"Rule skipped - placeholder_id '{$rule->placeholder_id}' not found in config.",
+					'Content Ads',
+					'warn'
+				);
+				continue;
+			}
+			$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
+			if ($rule->display != 'disabled') {
 				// Skip if this placeholder already exists in content
 				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
 					Ezoic_Integration_Logger::console_debug(
@@ -196,7 +220,6 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 						continue 2;
 				}
 			} else {
-				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 				Ezoic_Integration_Logger::console_debug(
 					"Placement skipped - display is disabled.",
 					'Content Ads',
@@ -237,7 +260,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		}
 
 		// If the placement display option is out of bounds, return the content
-		if ($placement_paragraph == -1 || $placement_paragraph > \count($this->paragraphs)) {
+		if ($placement_paragraph < 1 || $placement_paragraph > \count($this->paragraphs)) {
 			// Only show paragraph limit warning once per content processing
 			if (!$this->paragraph_limit_warning_shown) {
 				Ezoic_Integration_Logger::console_debug(

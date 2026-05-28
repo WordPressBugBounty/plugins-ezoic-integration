@@ -389,8 +389,11 @@ class Ezoic_Integration_Public
 	 */
 	public function inject_ezoic_js_scripts()
 	{
-		// Do not inject scripts in admin contexts
 		if ($this->is_admin_context()) {
+			return;
+		}
+
+		if ($this->should_disable_ads_for_user()) {
 			return;
 		}
 
@@ -442,8 +445,10 @@ class Ezoic_Integration_Public
 		// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
 		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
 
-		// Privacy/CMP scripts (must load first)
-		echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
+		// CCPA/GPP can be suppressed independently of the CMP/GDPR gatekeeper script.
+		if (Ezoic_Integration_Privacy_Config::should_inject_ccpa_script()) {
+			echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
+		}
 		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
 	}
 
@@ -676,19 +681,44 @@ class Ezoic_Integration_Public
 	}
 
 	/**
-	 * Check if ads should be disabled for the current user based on their role
-	 * This checks for the no-ads cookie that is set by the AdTester class
+	 * Check if ads should be disabled for the current user based on their role.
+	 * Checks the cookie first (fast path), then falls back to a direct role check
+	 * in case the cookie hasn't been set yet (e.g. first request after login).
 	 *
 	 * @return bool True if ads should be disabled, false otherwise
 	 */
 	private function should_disable_ads_for_user()
 	{
-		// Check for the no-ads cookie set by AdTester
-		if (isset($_COOKIE['x-ez-wp-noads']) && $_COOKIE['x-ez-wp-noads'] == '1') {
-			return true;
+		static $cached = null;
+		if ($cached !== null) {
+			return $cached;
 		}
 
-		return false;
+		if (isset($_COOKIE['x-ez-wp-noads']) && $_COOKIE['x-ez-wp-noads'] == '1') {
+			return $cached = true;
+		}
+
+		if (!is_user_logged_in()) {
+			return $cached = false;
+		}
+
+		if (class_exists('Ezoic_Namespace\Ezoic_AdTester_Config')) {
+			$config = Ezoic_AdTester_Config::load();
+			if (
+				isset($config->user_roles_with_ads_disabled)
+				&& !empty($config->user_roles_with_ads_disabled)
+			) {
+				$currentUserRoles = array_map('strtolower', wp_get_current_user()->roles);
+				$disabledRoles    = array_map('strtolower', $config->user_roles_with_ads_disabled);
+				$diff             = array_diff($currentUserRoles, $disabledRoles);
+
+				if (count($currentUserRoles) !== count($diff)) {
+					return $cached = true;
+				}
+			}
+		}
+
+		return $cached = false;
 	}
 
 	/**
