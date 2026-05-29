@@ -6,6 +6,7 @@ namespace {
 	$GLOBALS['ezoic_test_remote_response'] = null;
 	$GLOBALS['ezoic_test_remote_calls'] = 0;
 	$GLOBALS['ezoic_test_token'] = 'test-token';
+	$GLOBALS['ezoic_test_token_calls'] = 0;
 	$GLOBALS['ezoic_test_api_key'] = null;
 	$GLOBALS['ezoic_test_transient_ttls'] = array();
 
@@ -23,12 +24,32 @@ namespace {
 		return true;
 	}
 
+	function delete_transient($key) {
+		unset($GLOBALS['ezoic_test_transients'][$key]);
+		unset($GLOBALS['ezoic_test_transient_ttls'][$key]);
+		return true;
+	}
+
 	function get_option($key, $default = false) {
 		return array_key_exists($key, $GLOBALS['ezoic_test_options']) ? $GLOBALS['ezoic_test_options'][$key] : $default;
 	}
 
+	function add_option($key, $value = '', $deprecated = '', $autoload = 'yes') {
+		if (array_key_exists($key, $GLOBALS['ezoic_test_options'])) {
+			return false;
+		}
+
+		$GLOBALS['ezoic_test_options'][$key] = $value;
+		return true;
+	}
+
 	function update_option($key, $value, $autoload = null) {
 		$GLOBALS['ezoic_test_options'][$key] = $value;
+		return true;
+	}
+
+	function delete_option($key) {
+		unset($GLOBALS['ezoic_test_options'][$key]);
 		return true;
 	}
 
@@ -68,6 +89,7 @@ class Ezoic_Integration_Request_Utils {
 
 class Ezoic_Integration_Authentication {
 	public static function get_token($requestURL = '') {
+		$GLOBALS['ezoic_test_token_calls']++;
 		return $GLOBALS['ezoic_test_token'];
 	}
 }
@@ -86,6 +108,7 @@ function reset_privacy_config_test_state() {
 	$GLOBALS['ezoic_test_remote_response'] = null;
 	$GLOBALS['ezoic_test_remote_calls'] = 0;
 	$GLOBALS['ezoic_test_token'] = 'test-token';
+	$GLOBALS['ezoic_test_token_calls'] = 0;
 	$GLOBALS['ezoic_test_api_key'] = null;
 	$GLOBALS['ezoic_test_transient_ttls'] = array();
 	$GLOBALS['wp'] = (object) array('request' => '');
@@ -186,6 +209,8 @@ $GLOBALS['ezoic_test_remote_response'] = array(
 	)),
 );
 assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'backend disabled CCPA suppresses script');
+assert_same(0, $GLOBALS['ezoic_test_token_calls'], 'privacy config fetch does not request auth token');
+assert_same(array(), $GLOBALS['ezoic_test_last_request']['args']['headers'], 'privacy config fetch does not send auth headers');
 assert_same(false, \get_option('ezoic_privacy_config_example.com', array())['ccpaFooterEnabled'], 'successful backend config is cached');
 assert_same(array(
 	array('target' => 'single_page', 'url' => '/privacy-policy'),
@@ -193,6 +218,24 @@ assert_same(array(
 	array('target' => 'contains', 'url' => 'source=newsletter'),
 ), \get_option('ezoic_privacy_config_example.com', array())['disabledCcpaGppPages'], 'backend CCPA/GPP page rules are normalized into cache');
 assert_same(300, $GLOBALS['ezoic_test_transient_ttls']['ezoic_privacy_config_example.com'], 'successful backend config uses five-minute cache TTL before jitter');
+assert_same(false, \get_option('ezoic_privacy_config_example.com_fetch_lock', false), 'successful backend config releases fetch lock');
+
+reset_privacy_config_test_state();
+$GLOBALS['ezoic_test_api_key'] = 'api-key-123';
+$GLOBALS['ezoic_test_remote_response'] = array(
+	'body' => json_encode(array(
+		'status' => true,
+		'data' => array(
+			'ccpaFooterEnabled' => true,
+			'cmpDialogEnabled' => true,
+			'thirdPartyCMPEnabled' => false,
+			'disabledCcpaGppPages' => array(),
+		),
+	)),
+);
+assert_same(true, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'api-key privacy config preserves enabled CCPA');
+assert_same(true, strpos($GLOBALS['ezoic_test_last_request']['url'], 'developerKey=api-key-123') !== false, 'api-key privacy config appends developer key');
+assert_same(0, $GLOBALS['ezoic_test_token_calls'], 'api-key privacy config does not request auth token');
 
 reset_privacy_config_test_state();
 $GLOBALS['ezoic_test_remote_response'] = array(
@@ -221,10 +264,52 @@ reset_privacy_config_test_state();
 \update_option('ezoic_privacy_config_example.com', array('ccpaFooterEnabled' => false));
 $GLOBALS['ezoic_test_remote_response'] = new \WP_Error();
 assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'stale disabled cache is used on backend failure');
+assert_same(false, \get_transient('ezoic_privacy_config_example.com')['ccpaFooterEnabled'], 'stale config is cached briefly after backend failure');
+assert_same(300, $GLOBALS['ezoic_test_transient_ttls']['ezoic_privacy_config_example.com'], 'stale config after backend failure uses error cache TTL');
 
 reset_privacy_config_test_state();
-$GLOBALS['ezoic_test_token'] = '';
-assert_same(true, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'missing auth and no cache preserves existing script behavior');
+\add_option('ezoic_privacy_config_example.com_fetch_lock', time(), '', false);
+assert_same(true, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'active fetch lock uses safe default without backend request');
+assert_same(0, $GLOBALS['ezoic_test_remote_calls'], 'active fetch lock does not call backend');
+assert_same(0, $GLOBALS['ezoic_test_token_calls'], 'active fetch lock does not request auth token');
+
+reset_privacy_config_test_state();
+\update_option('ezoic_privacy_config_example.com', array('ccpaFooterEnabled' => false));
+\add_option('ezoic_privacy_config_example.com_fetch_lock', time(), '', false);
+assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'active fetch lock uses stale config when available');
+assert_same(0, $GLOBALS['ezoic_test_remote_calls'], 'active fetch lock with stale config does not call backend');
+
+reset_privacy_config_test_state();
+\add_option('ezoic_privacy_config_example.com_fetch_lock', time() - 60, '', false);
+$GLOBALS['ezoic_test_remote_response'] = array(
+	'body' => json_encode(array(
+		'status' => true,
+		'data' => array(
+			'ccpaFooterEnabled' => false,
+			'cmpDialogEnabled' => true,
+			'thirdPartyCMPEnabled' => false,
+			'disabledCcpaGppPages' => array(),
+		),
+	)),
+);
+assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'expired fetch lock allows backend refresh');
+assert_same(1, $GLOBALS['ezoic_test_remote_calls'], 'expired fetch lock calls backend once');
+assert_same(false, \get_option('ezoic_privacy_config_example.com_fetch_lock', false), 'expired fetch lock is released after successful refresh');
+
+reset_privacy_config_test_state();
+$GLOBALS['ezoic_test_remote_response'] = array(
+	'body' => json_encode(array(
+		'status' => true,
+		'data' => array(
+			'ccpaFooterEnabled' => false,
+			'cmpDialogEnabled' => true,
+			'thirdPartyCMPEnabled' => false,
+			'disabledCcpaGppPages' => array(),
+		),
+	)),
+);
+assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'privacy config fetch succeeds without auth token');
+assert_same(0, $GLOBALS['ezoic_test_token_calls'], 'missing auth token is not needed for privacy config');
 
 echo "privacy-config tests passed\n";
 }

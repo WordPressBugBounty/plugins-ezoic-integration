@@ -10,6 +10,7 @@ class Ezoic_Integration_Privacy_Config {
 	const CACHE_KEY = 'ezoic_privacy_config';
 	const CACHE_TTL = 300;
 	const ERROR_CACHE_TTL = 300;
+	const FETCH_LOCK_TTL = 30;
 	const REQUEST_TIMEOUT = 3;
 
 	/**
@@ -40,20 +41,73 @@ class Ezoic_Integration_Privacy_Config {
 			return $cached;
 		}
 
+		if (!self::acquire_fetch_lock($domain)) {
+			$stale = self::get_cached_config($domain, true);
+			if (is_array($stale)) {
+				return $stale;
+			}
+
+			return array('ccpaFooterEnabled' => true);
+		}
+
 		$fetched = self::fetch_config($domain);
 		if (is_array($fetched)) {
 			self::cache_config($domain, $fetched);
+			self::release_fetch_lock($domain);
 			return $fetched;
 		}
 
 		$stale = self::get_cached_config($domain, true);
 		if (is_array($stale)) {
+			self::cache_config($domain, $stale, false, self::ERROR_CACHE_TTL);
 			return $stale;
 		}
 
 		$default = array('ccpaFooterEnabled' => true);
 		self::cache_config($domain, $default, false, self::ERROR_CACHE_TTL);
 		return $default;
+	}
+
+	private static function acquire_fetch_lock($domain) {
+		$lock_key = self::fetch_lock_key($domain);
+		if (function_exists('add_option') && function_exists('get_option')) {
+			$now = time();
+			if (\add_option($lock_key, $now, '', false)) {
+				return true;
+			}
+
+			$lock_time = (int) \get_option($lock_key, 0);
+			if ($lock_time > 0 && $now - $lock_time > self::FETCH_LOCK_TTL && function_exists('delete_option')) {
+				\delete_option($lock_key);
+				return \add_option($lock_key, $now, '', false);
+			}
+
+			return false;
+		}
+
+		if (!function_exists('get_transient') || !function_exists('set_transient')) {
+			return true;
+		}
+
+		if (\get_transient($lock_key) !== false) {
+			return false;
+		}
+
+		return \set_transient($lock_key, 1, self::FETCH_LOCK_TTL);
+	}
+
+	private static function release_fetch_lock($domain) {
+		if (function_exists('delete_option')) {
+			\delete_option(self::fetch_lock_key($domain));
+		}
+
+		if (function_exists('delete_transient')) {
+			\delete_transient(self::fetch_lock_key($domain));
+		}
+	}
+
+	private static function fetch_lock_key($domain) {
+		return self::cache_key($domain) . '_fetch_lock';
 	}
 
 	private static function get_cached_config($domain, $allow_stale) {
@@ -114,13 +168,6 @@ class Ezoic_Integration_Privacy_Config {
 
 		if (Ezoic_Cdn::ezoic_cdn_api_key() != null) {
 			$request_url .= '&developerKey=' . rawurlencode(Ezoic_Cdn::ezoic_cdn_api_key());
-		} else {
-			$token = Ezoic_Integration_Authentication::get_token();
-			if ($token == '') {
-				return null;
-			}
-
-			$request_args['headers']['Authentication'] = 'Bearer ' . $token;
 		}
 
 		$response = \wp_remote_get($request_url, $request_args);
