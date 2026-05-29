@@ -253,7 +253,7 @@ class Ezoic_Integration_Privacy_Config {
 				return true;
 			}
 
-			if ($target === 'directory' && strpos($current_path, self::normalized_url_path($url)) === 0) {
+			if ($target === 'directory' && self::matches_directory_path($current_path, self::normalized_url_path($url))) {
 				return true;
 			}
 
@@ -263,6 +263,14 @@ class Ezoic_Integration_Privacy_Config {
 		}
 
 		return false;
+	}
+
+	private static function matches_directory_path($current_path, $rule_path) {
+		if ($rule_path === '/') {
+			return true;
+		}
+
+		return $current_path === $rule_path || strpos($current_path, $rule_path . '/') === 0;
 	}
 
 	private static function current_request_url() {
@@ -293,7 +301,12 @@ class Ezoic_Integration_Privacy_Config {
 			return '/';
 		}
 
-		return '/' . ltrim($path, '/');
+		$path = '/' . ltrim($path, '/');
+		if ($path !== '/') {
+			$path = rtrim($path, '/');
+		}
+
+		return $path;
 	}
 
 	private static function page_rule_value($page, $key) {

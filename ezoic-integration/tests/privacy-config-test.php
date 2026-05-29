@@ -177,6 +177,17 @@ assert_same(true, strpos($privacy_scripts, EZOIC_GATEKEEPER_SCRIPT_URL) !== fals
 assert_same(true, strpos($privacy_scripts, 'data-ez-gpp-suppress-banner="true"') !== false, 'suppressed page marks Gatekeeper script to suppress GPP banner');
 
 reset_privacy_config_test_state();
+set_privacy_config_request('/whitelisting-guide', 'sldkfjsdlkfj');
+\set_transient('ezoic_privacy_config_example.com', array(
+	'ccpaFooterEnabled' => true,
+	'disabledCcpaGppPages' => array(
+		array('target' => 'single_page', 'url' => '/whitelisting-guide/'),
+	),
+), 3600);
+assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'single_page CCPA/GPP rule ignores query strings and insignificant trailing slashes');
+assert_same(true, Ezoic_Integration_Privacy_Config::should_suppress_ccpa_gpp_banner(), 'trailing-slash single_page rule suppresses Gatekeeper GPP banner');
+
+reset_privacy_config_test_state();
 set_privacy_config_request('/privacy-policy/subpage', 'ignored=1');
 \set_transient('ezoic_privacy_config_example.com', array(
 	'ccpaFooterEnabled' => true,
@@ -185,6 +196,36 @@ set_privacy_config_request('/privacy-policy/subpage', 'ignored=1');
 	),
 ), 3600);
 assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'directory CCPA/GPP rule matches path prefix and ignores query string');
+
+reset_privacy_config_test_state();
+set_privacy_config_request('/whitelisting-guide/subpage', 'ignored=1');
+\set_transient('ezoic_privacy_config_example.com', array(
+	'ccpaFooterEnabled' => true,
+	'disabledCcpaGppPages' => array(
+		array('target' => 'directory', 'url' => '/whitelisting-guide/'),
+	),
+), 3600);
+assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'directory CCPA/GPP rule ignores insignificant trailing slash for child paths');
+
+reset_privacy_config_test_state();
+set_privacy_config_request('/whitelisting-guide-extra', 'ignored=1');
+\set_transient('ezoic_privacy_config_example.com', array(
+	'ccpaFooterEnabled' => true,
+	'disabledCcpaGppPages' => array(
+		array('target' => 'directory', 'url' => '/whitelisting-guide/'),
+	),
+), 3600);
+assert_same(true, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'directory CCPA/GPP rule does not match sibling path with shared prefix');
+
+reset_privacy_config_test_state();
+set_privacy_config_request('/other-page', 'ignored=1');
+\set_transient('ezoic_privacy_config_example.com', array(
+	'ccpaFooterEnabled' => true,
+	'disabledCcpaGppPages' => array(
+		array('target' => 'single_page', 'url' => '/'),
+	),
+), 3600);
+assert_same(true, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'single_page root CCPA/GPP rule does not match non-root paths');
 
 reset_privacy_config_test_state();
 set_privacy_config_request('/article', 'source=newsletter');

@@ -110,6 +110,12 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.22.8 =
+* Match CCPA/GPP disabled pages across query-string URLs and insignificant trailing slash differences
+
+= 2.22.7 =
+* Suppress the visible GPP banner on disabled CCPA/GPP pages while preserving Gatekeeper
+
 = 2.22.6 =
 * Reduce WordPress privacy config authentication callbacks and cache-miss request bursts
 
