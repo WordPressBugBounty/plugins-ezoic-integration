@@ -76,6 +76,18 @@ namespace {
 		return $min;
 	}
 
+	function plugin_dir_path($path) {
+		return dirname($path) . '/';
+	}
+
+	function is_admin() {
+		return false;
+	}
+
+	function is_customize_preview() {
+		return false;
+	}
+
 	class WP_Error {}
 }
 
@@ -100,7 +112,15 @@ class Ezoic_Cdn {
 	}
 }
 
+if (!defined(__NAMESPACE__ . '\\EZOIC_CMP_SCRIPT_URL')) {
+	define(__NAMESPACE__ . '\\EZOIC_CMP_SCRIPT_URL', 'https://cmp.gatekeeperconsent.com/min.js');
+}
+if (!defined(__NAMESPACE__ . '\\EZOIC_GATEKEEPER_SCRIPT_URL')) {
+	define(__NAMESPACE__ . '\\EZOIC_GATEKEEPER_SCRIPT_URL', 'https://the.gatekeeperconsent.com/cmp.min.js');
+}
+
 require_once __DIR__ . '/../includes/class-ezoic-integration-privacy-config.php';
+require_once __DIR__ . '/../public/class-ezoic-integration-public.php';
 
 function reset_privacy_config_test_state() {
 	$GLOBALS['ezoic_test_transients'] = array();
@@ -147,6 +167,14 @@ set_privacy_config_request('/privacy-policy', 'ignored=1');
 	),
 ), 3600);
 assert_same(false, Ezoic_Integration_Privacy_Config::should_inject_ccpa_script(), 'single_page CCPA/GPP rule matches path and ignores query string');
+assert_same(true, Ezoic_Integration_Privacy_Config::should_suppress_ccpa_gpp_banner(), 'single_page CCPA/GPP rule suppresses Gatekeeper GPP banner');
+$public = new Ezoic_Integration_Public('ezoic-integration', 'test');
+\ob_start();
+$public->inject_privacy_scripts();
+$privacy_scripts = \ob_get_clean();
+assert_same(false, strpos($privacy_scripts, EZOIC_CMP_SCRIPT_URL) !== false, 'suppressed page omits plugin CCPA/GPP script');
+assert_same(true, strpos($privacy_scripts, EZOIC_GATEKEEPER_SCRIPT_URL) !== false, 'suppressed page keeps Gatekeeper script');
+assert_same(true, strpos($privacy_scripts, 'data-ez-gpp-suppress-banner="true"') !== false, 'suppressed page marks Gatekeeper script to suppress GPP banner');
 
 reset_privacy_config_test_state();
 set_privacy_config_request('/privacy-policy/subpage', 'ignored=1');

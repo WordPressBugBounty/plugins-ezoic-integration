@@ -17,17 +17,24 @@ class Ezoic_Integration_Privacy_Config {
 	 * Returns true when the WordPress plugin should emit the CCPA/GPP script.
 	 */
 	public static function should_inject_ccpa_script() {
+		return !self::should_suppress_ccpa_gpp_banner();
+	}
+
+	/**
+	 * Returns true when Gatekeeper should keep GPP available but skip the visible CCPA/GPP footer.
+	 */
+	public static function should_suppress_ccpa_gpp_banner() {
 		$config = self::get_config();
 
 		if (!is_array($config) || !array_key_exists('ccpaFooterEnabled', $config)) {
-			return true;
-		}
-
-		if (!(bool) $config['ccpaFooterEnabled']) {
 			return false;
 		}
 
-		return !self::matches_disabled_ccpa_gpp_page($config);
+		if (!(bool) $config['ccpaFooterEnabled']) {
+			return true;
+		}
+
+		return self::matches_disabled_ccpa_gpp_page($config);
 	}
 
 	private static function get_config() {

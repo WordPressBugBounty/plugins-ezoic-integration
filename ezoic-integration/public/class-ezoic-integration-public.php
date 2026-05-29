@@ -444,12 +444,13 @@ class Ezoic_Integration_Public
 
 		// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
 		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+		$gpp_suppress_attr = Ezoic_Integration_Privacy_Config::should_suppress_ccpa_gpp_banner() ? ' data-ez-gpp-suppress-banner="true"' : '';
 
 		// CCPA/GPP can be suppressed independently of the CMP/GDPR gatekeeper script.
 		if (Ezoic_Integration_Privacy_Config::should_inject_ccpa_script()) {
 			echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
 		}
-		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"' . $gpp_suppress_attr . $litespeed_attr . '></script>' . "\n";
 	}
 
 	/**
