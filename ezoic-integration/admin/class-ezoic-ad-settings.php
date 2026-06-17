@@ -315,6 +315,7 @@ class Ezoic_Integration_Ad_Settings
 
 		// Reset configuration (this will clear active_placements and other settings)
 		$this->adtester->config->reset();
+		Ezoic_AdTester_Placeholder::set_reserve_placeholder_space_enabled(false);
 
 		// Reset active placements to original API data (this will rebuild active_placements)
 		$this->reset_active_placements_to_original();
@@ -409,6 +410,10 @@ class Ezoic_Integration_Ad_Settings
 		$config->user_roles_with_ads_disabled 	= $payload->userRolesWithAdsDisabled;
 		$config->meta_tags 						= $payload->metaTags;
 		$config->exclude_urls					= $payload->excludeUrls;
+
+		if (isset($payload->reservePlaceholderSpace)) {
+			Ezoic_AdTester_Placeholder::set_reserve_placeholder_space_enabled($payload->reservePlaceholderSpace);
+		}
 
 		// Check if JS integration with WP placeholders is enabled
 		$js_integration_enabled = get_option('ezoic_js_integration_enabled', false);
@@ -771,6 +776,7 @@ class Ezoic_Integration_Ad_Settings
 					"jsIntegrationEnabled": <?php echo get_option('ezoic_js_integration_enabled', false) ? 'true' : 'false'; ?>,
 					"metaTags": <?php echo $metaTags ?>,
 					"paragraphTags": <?php echo $paragraphTags ?>,
+					"reservePlaceholderSpace": <?php echo Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false) ? 'true' : 'false'; ?>,
 					"sidebarId": "<?php echo $this->adtester->config->sidebar_id ?>",
 					"userRoles": <?php echo \json_encode($this->get_user_roles()) ?>,
 					"userRolesWithAdsDisabled": <?php echo $userRolesWithAdsDisabled ?>
@@ -824,7 +830,8 @@ class Ezoic_Integration_Ad_Settings
 			'placeholderConfig' => $configArray,
 			'placeholders' => $placeholderArray,
 			'revenues' => $this->adtester->revenues,
-			'activePlacements' => $this->adtester->config->active_placements
+			'activePlacements' => $this->adtester->config->active_placements,
+			'reservePlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false)
 		);
 	}
 

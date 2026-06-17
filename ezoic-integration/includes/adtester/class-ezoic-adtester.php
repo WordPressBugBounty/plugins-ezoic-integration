@@ -375,8 +375,10 @@ class Ezoic_AdTester extends Ezoic_Feature {
 				$this->config->placeholders[ $ad->id ] = $new_placeholder;
 
 				$is_new = true;
-			} elseif ( $this->config->placeholders[ $ad->id ]->is_video_placeholder != $ad->isVideoPlaceholder ) {
+			} else {
 				$this->config->placeholders[ $ad->id ]->is_video_placeholder = $ad->isVideoPlaceholder;
+				$reservation_dimensions                                      = isset( $ad->reservationDimensions ) ? $ad->reservationDimensions : array();
+				$this->config->placeholders[ $ad->id ]->set_reservation_dimensions( $reservation_dimensions );
 			}
 
 			// Add default configuration for new placeholders or existing wp_ placeholders without config
@@ -803,6 +805,10 @@ class Ezoic_AdTester extends Ezoic_Feature {
 	 */
 	private $excerpt_number = 0;
 	public function set_excerpt_placeholder( $content ) {
+		if ( ! $this->is_frontend_page_request() ) {
+			return $content;
+		}
+
 		if ( $this->should_skip_insertion() ) {
 			return $content;
 		}
@@ -854,12 +860,15 @@ class Ezoic_AdTester extends Ezoic_Feature {
 		$in_loop     = \in_the_loop();
 		$is_main     = \is_main_query();
 		$is_singular = \is_singular();
-		$is_frontend = ! is_admin() && ! is_feed() && ! wp_doing_ajax();
 
 		$should_insert = false;
+		if ( ! $this->is_frontend_page_request() ) {
+			return $content;
+		}
+
 		if ( $in_loop && $is_main ) {
 			$should_insert = true;
-		} elseif ( $is_frontend && $is_singular ) {
+		} elseif ( $is_singular ) {
 			$should_insert = true;
 		}
 
@@ -1449,6 +1458,10 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			|| ! is_array( $this->config->placeholders )
 			|| empty( $this->config->placeholders )
 			|| $this->user_has_ads_disabled();
+	}
+
+	private function is_frontend_page_request() {
+		return ! is_admin() && ! is_feed() && ! wp_doing_ajax();
 	}
 
 	/**

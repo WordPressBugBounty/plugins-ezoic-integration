@@ -88,7 +88,8 @@ class Ezoic_JS_Integration_Settings
 		return array(
 			'js_auto_insert_scripts' => 1,
 			'js_enable_privacy_scripts' => 1,
-			'js_use_wp_placeholders' => 1
+			'js_use_wp_placeholders' => 1,
+			'js_reserve_placeholder_space' => 0
 		);
 	}
 
@@ -205,18 +206,22 @@ class Ezoic_JS_Integration_Settings
 	{
 		// Get current options to merge with
 		$current_options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+		$current_options = array_merge($this->default_js_integration_options(), is_array($current_options) ? $current_options : array());
+		$settings = is_array($settings) ? $settings : array();
 
 		// Sanitize each setting
 		$sanitized = array();
 		$sanitized['js_auto_insert_scripts'] = isset($settings['js_auto_insert_scripts']) ? 1 : 0;
 		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
 		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
+		$sanitized['js_reserve_placeholder_space'] = isset($current_options['js_reserve_placeholder_space']) ? (int) (bool) $current_options['js_reserve_placeholder_space'] : 0;
 
 		// Check if any relevant settings changed
 		$settings_changed = (
 			$current_options['js_auto_insert_scripts'] !== $sanitized['js_auto_insert_scripts'] ||
 			$current_options['js_enable_privacy_scripts'] !== $sanitized['js_enable_privacy_scripts'] ||
-			$current_options['js_use_wp_placeholders'] !== $sanitized['js_use_wp_placeholders']
+			$current_options['js_use_wp_placeholders'] !== $sanitized['js_use_wp_placeholders'] ||
+			$current_options['js_reserve_placeholder_space'] !== $sanitized['js_reserve_placeholder_space']
 		);
 
 		// Trigger plugin data send if settings changed

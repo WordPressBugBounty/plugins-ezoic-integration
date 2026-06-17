@@ -17,6 +17,7 @@ class Ezoic_AdTester_PublisherAd
 	public $positionType;
 	public $isAdPicker;
 	public $isVideoPlaceholder;
+	public $reservationDimensions;
 
 	// Not exposing these properties publicly unless they need to be used
 	private $adCode;
