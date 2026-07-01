@@ -379,6 +379,8 @@ class Ezoic_AdTester extends Ezoic_Feature {
 				$this->config->placeholders[ $ad->id ]->is_video_placeholder = $ad->isVideoPlaceholder;
 				$reservation_dimensions                                      = isset( $ad->reservationDimensions ) ? $ad->reservationDimensions : array();
 				$this->config->placeholders[ $ad->id ]->set_reservation_dimensions( $reservation_dimensions );
+				$reservation_spacing                                         = isset( $ad->reservationSpacing ) ? $ad->reservationSpacing : array();
+				$this->config->placeholders[ $ad->id ]->set_reservation_spacing( $reservation_spacing );
 			}
 
 			// Add default configuration for new placeholders or existing wp_ placeholders without config

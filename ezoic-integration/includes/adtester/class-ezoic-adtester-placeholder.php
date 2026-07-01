@@ -4,8 +4,9 @@ namespace Ezoic_Namespace;
 
 class Ezoic_AdTester_Placeholder
 {
-	const PLACEHOLDER_RESERVATION_ATTRIBUTES = ' style="min-height: 280px; display: block; text-align: center;"';
+	const PLACEHOLDER_RESERVATION_FALLBACK_MIN_HEIGHT = 280;
 	const RESERVE_PLACEHOLDER_SPACE_OPTION = 'js_reserve_placeholder_space';
+	const RESERVE_ALL_PLACEHOLDER_SPACE_OPTION = 'js_reserve_all_placeholder_space';
 	const RESERVE_PLACEHOLDER_SPACE_QUERY_PARAM = 'ez_reserve_placeholders';
 	const EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s -->%s<div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d"></div><!-- End Ezoic - %s - %s -->';
 	const JS_EMBED_CODE_TEMPLATE = '<!-- Ezoic - %s - %s -->%s<div id="ezoic-pub-ad-placeholder-%d"%s data-inserter-version="%d" data-placement-location="%s"></div><script data-ezoic="1"%s>ezstandalone.cmd.push(function () { ezstandalone.showAds(%d); });</script><!-- End Ezoic - %s - %s -->';
@@ -20,6 +21,7 @@ class Ezoic_AdTester_Placeholder
 	public $name;
 	public $is_video_placeholder;
 	public $reservation_dimensions = array();
+	public $reservation_spacing = array();
 
 	// Getter for camelCase property name for frontend compatibility
 	public function __get($property)
@@ -33,7 +35,7 @@ class Ezoic_AdTester_Placeholder
 		return null;
 	}
 
-	public function __construct($id, $position_id, $name, $position_type, $is_video_placeholder, $reservation_dimensions = array())
+	public function __construct($id, $position_id, $name, $position_type, $is_video_placeholder, $reservation_dimensions = array(), $reservation_spacing = array())
 	{
 		$this->id						= $id;
 		$this->position_id				= $position_id;
@@ -41,11 +43,17 @@ class Ezoic_AdTester_Placeholder
 		$this->name						= $name;
 		$this->is_video_placeholder		= $is_video_placeholder;
 		$this->set_reservation_dimensions($reservation_dimensions);
+		$this->set_reservation_spacing($reservation_spacing);
 	}
 
 	public function set_reservation_dimensions($reservation_dimensions)
 	{
 		$this->reservation_dimensions = self::normalize_reservation_dimensions($reservation_dimensions);
+	}
+
+	public function set_reservation_spacing($reservation_spacing)
+	{
+		$this->reservation_spacing = self::normalize_reservation_spacing($reservation_spacing);
 	}
 
 	public static function is_reserve_placeholder_space_enabled($allow_query_override = true)
@@ -82,14 +90,50 @@ class Ezoic_AdTester_Placeholder
 		update_option('ezoic_js_integration_options', $js_options);
 	}
 
+	public static function is_reserve_all_placeholder_space_enabled()
+	{
+		$js_options = get_option('ezoic_js_integration_options', array());
+		if (!is_array($js_options) || !isset($js_options[self::RESERVE_ALL_PLACEHOLDER_SPACE_OPTION])) {
+			return false;
+		}
+
+		return (bool) $js_options[self::RESERVE_ALL_PLACEHOLDER_SPACE_OPTION];
+	}
+
+	public static function set_reserve_all_placeholder_space_enabled($enabled)
+	{
+		$js_options = get_option('ezoic_js_integration_options', array());
+		if (!is_array($js_options)) {
+			$js_options = array();
+		}
+
+		$js_options = array_merge(
+			array(
+				'js_auto_insert_scripts' => 1,
+				'js_enable_privacy_scripts' => 1,
+				'js_use_wp_placeholders' => 1,
+				self::RESERVE_PLACEHOLDER_SPACE_OPTION => 0,
+			),
+			$js_options
+		);
+		$js_options[self::RESERVE_ALL_PLACEHOLDER_SPACE_OPTION] = $enabled ? 1 : 0;
+
+		update_option('ezoic_js_integration_options', $js_options);
+	}
+
 	private function placeholder_attributes()
 	{
-		$attributes = $this->should_use_fallback_reservation() ? self::PLACEHOLDER_RESERVATION_ATTRIBUTES : '';
+		$attributes = $this->should_use_fallback_reservation() ? $this->fallback_reservation_attributes() : '';
 		if ($this->is_video_placeholder) {
 			$attributes .= ' data-ezhumixplayerlocation="true"';
 		}
 
 		return $attributes;
+	}
+
+	private function fallback_reservation_attributes()
+	{
+		return ' style="min-height: ' . $this->reservation_height(self::PLACEHOLDER_RESERVATION_FALLBACK_MIN_HEIGHT) . 'px; display: block; text-align: center;"';
 	}
 
 	private function placeholder_reservation_style_block()
@@ -113,11 +157,39 @@ class Ezoic_AdTester_Placeholder
 
 	private function should_reserve_placeholder_space()
 	{
-		if (!in_array($this->position_type, array('top_of_page', 'under_page_title'), true)) {
+		if (!self::is_reserve_placeholder_space_enabled()) {
 			return false;
 		}
 
-		return self::is_reserve_placeholder_space_enabled();
+		if (in_array($this->position_type, array('top_of_page', 'under_page_title'), true)) {
+			return true;
+		}
+
+		return self::is_reserve_all_placeholder_space_enabled() && $this->is_in_page_reservation_placeholder();
+	}
+
+	private function is_in_page_reservation_placeholder()
+	{
+		$in_page_position_types = array(
+			'bottom_of_page',
+			'sidebar',
+			'sidebar_middle',
+			'sidebar_bottom',
+			'under_first_paragraph',
+			'under_second_paragraph',
+			'mid_content',
+			'long_content',
+			'longer_content',
+			'longest_content',
+		);
+
+		if (in_array($this->position_type, $in_page_position_types, true)) {
+			return true;
+		}
+
+		return strpos($this->position_type, 'incontent_') === 0
+			|| strpos($this->position_type, 'infinite_scroll_') === 0
+			|| strpos($this->position_type, 'pub_ad_pos_') === 0;
 	}
 
 	private function has_reservation_dimensions()
@@ -176,15 +248,34 @@ class Ezoic_AdTester_Placeholder
 			return '';
 		}
 
-		$declaration = 'min-height: ' . intval($dimension['minHeight']) . 'px;';
+		$declaration = 'min-height: ' . $this->reservation_height($dimension['minHeight']) . 'px;';
 		if (isset($dimension['minWidth']) && intval($dimension['minWidth']) > 0) {
-			$declaration .= ' min-width: ' . intval($dimension['minWidth']) . 'px;';
+			$declaration .= ' min-width: ' . $this->reservation_width($dimension['minWidth']) . 'px;';
 		}
 		if ($include_display) {
 			$declaration .= ' display: block; text-align: center;';
 		}
 
 		return $declaration;
+	}
+
+	private function reservation_height($min_height)
+	{
+		return intval($min_height) + $this->reservation_spacing_for('top') + $this->reservation_spacing_for('bottom');
+	}
+
+	private function reservation_width($min_width)
+	{
+		return intval($min_width) + $this->reservation_spacing_for('left') + $this->reservation_spacing_for('right');
+	}
+
+	private function reservation_spacing_for($side)
+	{
+		if (!isset($this->reservation_spacing[$side])) {
+			return 0;
+		}
+
+		return intval($this->reservation_spacing[$side]);
 	}
 
 	private function desktop_media_query($dimension)
@@ -224,6 +315,25 @@ class Ezoic_AdTester_Placeholder
 				if (!empty($normalized_dimension)) {
 					$normalized[$form_factor][] = $normalized_dimension;
 				}
+			}
+		}
+
+		return $normalized;
+	}
+
+	private static function normalize_reservation_spacing($reservation_spacing)
+	{
+		if (is_object($reservation_spacing)) {
+			$reservation_spacing = get_object_vars($reservation_spacing);
+		}
+		if (!is_array($reservation_spacing)) {
+			return array();
+		}
+
+		$normalized = array();
+		foreach (array('top', 'right', 'bottom', 'left') as $side) {
+			if (isset($reservation_spacing[$side]) && intval($reservation_spacing[$side]) > 0) {
+				$normalized[$side] = intval($reservation_spacing[$side]);
 			}
 		}
 
@@ -316,7 +426,8 @@ class Ezoic_AdTester_Placeholder
 	public static function from_pubad($ad)
 	{
 		$reservation_dimensions = isset($ad->reservationDimensions) ? $ad->reservationDimensions : array();
-		$placeholder            = new Ezoic_AdTester_Placeholder($ad->id, $ad->adPositionId, $ad->name, $ad->positionType, $ad->isVideoPlaceholder, $reservation_dimensions);
+		$reservation_spacing    = isset($ad->reservationSpacing) ? $ad->reservationSpacing : array();
+		$placeholder            = new Ezoic_AdTester_Placeholder($ad->id, $ad->adPositionId, $ad->name, $ad->positionType, $ad->isVideoPlaceholder, $reservation_dimensions, $reservation_spacing);
 
 		return $placeholder;
 	}

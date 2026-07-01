@@ -89,7 +89,8 @@ class Ezoic_JS_Integration_Settings
 			'js_auto_insert_scripts' => 1,
 			'js_enable_privacy_scripts' => 1,
 			'js_use_wp_placeholders' => 1,
-			'js_reserve_placeholder_space' => 0
+			'js_reserve_placeholder_space' => 0,
+			'js_reserve_all_placeholder_space' => 0
 		);
 	}
 
@@ -215,13 +216,15 @@ class Ezoic_JS_Integration_Settings
 		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
 		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
 		$sanitized['js_reserve_placeholder_space'] = isset($current_options['js_reserve_placeholder_space']) ? (int) (bool) $current_options['js_reserve_placeholder_space'] : 0;
+		$sanitized['js_reserve_all_placeholder_space'] = isset($current_options['js_reserve_all_placeholder_space']) ? (int) (bool) $current_options['js_reserve_all_placeholder_space'] : 0;
 
 		// Check if any relevant settings changed
 		$settings_changed = (
 			$current_options['js_auto_insert_scripts'] !== $sanitized['js_auto_insert_scripts'] ||
 			$current_options['js_enable_privacy_scripts'] !== $sanitized['js_enable_privacy_scripts'] ||
 			$current_options['js_use_wp_placeholders'] !== $sanitized['js_use_wp_placeholders'] ||
-			$current_options['js_reserve_placeholder_space'] !== $sanitized['js_reserve_placeholder_space']
+			$current_options['js_reserve_placeholder_space'] !== $sanitized['js_reserve_placeholder_space'] ||
+			$current_options['js_reserve_all_placeholder_space'] !== $sanitized['js_reserve_all_placeholder_space']
 		);
 
 		// Trigger plugin data send if settings changed
@@ -411,11 +414,16 @@ class Ezoic_JS_Integration_Settings
 		if ($total_privacy_scripts > 0) {
 			$plugin_cmp_found = strpos($contents, 'id="ezoic-wp-plugin-cmp"') !== false;
 			$plugin_gatekeeper_found = strpos($contents, 'id="ezoic-wp-plugin-gatekeeper"') !== false;
-			$plugin_privacy_scripts_found = $plugin_cmp_found && $plugin_gatekeeper_found;
+
+			// The plugin only injects the cmp script when the CCPA/GPP footer is enabled;
+			// the gatekeeper script is always injected. Expect counts to match that, not a fixed 2.
+			$cmp_script_expected = Ezoic_Integration_Privacy_Config::should_inject_ccpa_script();
+			$expected_plugin_scripts = $cmp_script_expected ? 2 : 1;
+			$plugin_privacy_scripts_found = $plugin_gatekeeper_found && ($plugin_cmp_found || !$cmp_script_expected);
 
 			if ($plugin_privacy_scripts_found) {
-				// Both plugin scripts found - check if there are additional scripts
-				$privacy_duplicate = $total_privacy_scripts > 2;  // More than the 2 plugin scripts
+				// All expected plugin scripts found - check if there are additional scripts
+				$privacy_duplicate = $total_privacy_scripts > $expected_plugin_scripts;
 			} else {
 				$privacy_duplicate = true; // External scripts detected or incomplete plugin scripts
 			}

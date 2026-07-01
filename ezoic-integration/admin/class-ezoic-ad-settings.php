@@ -316,6 +316,7 @@ class Ezoic_Integration_Ad_Settings
 		// Reset configuration (this will clear active_placements and other settings)
 		$this->adtester->config->reset();
 		Ezoic_AdTester_Placeholder::set_reserve_placeholder_space_enabled(false);
+		Ezoic_AdTester_Placeholder::set_reserve_all_placeholder_space_enabled(false);
 
 		// Reset active placements to original API data (this will rebuild active_placements)
 		$this->reset_active_placements_to_original();
@@ -413,6 +414,9 @@ class Ezoic_Integration_Ad_Settings
 
 		if (isset($payload->reservePlaceholderSpace)) {
 			Ezoic_AdTester_Placeholder::set_reserve_placeholder_space_enabled($payload->reservePlaceholderSpace);
+		}
+		if (isset($payload->reserveAllPlaceholderSpace)) {
+			Ezoic_AdTester_Placeholder::set_reserve_all_placeholder_space_enabled($payload->reserveAllPlaceholderSpace);
 		}
 
 		// Check if JS integration with WP placeholders is enabled
@@ -777,6 +781,7 @@ class Ezoic_Integration_Ad_Settings
 					"metaTags": <?php echo $metaTags ?>,
 					"paragraphTags": <?php echo $paragraphTags ?>,
 					"reservePlaceholderSpace": <?php echo Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false) ? 'true' : 'false'; ?>,
+					"reserveAllPlaceholderSpace": <?php echo Ezoic_AdTester_Placeholder::is_reserve_all_placeholder_space_enabled() ? 'true' : 'false'; ?>,
 					"sidebarId": "<?php echo $this->adtester->config->sidebar_id ?>",
 					"userRoles": <?php echo \json_encode($this->get_user_roles()) ?>,
 					"userRolesWithAdsDisabled": <?php echo $userRolesWithAdsDisabled ?>
@@ -831,7 +836,8 @@ class Ezoic_Integration_Ad_Settings
 			'placeholders' => $placeholderArray,
 			'revenues' => $this->adtester->revenues,
 			'activePlacements' => $this->adtester->config->active_placements,
-			'reservePlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false)
+			'reservePlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false),
+			'reserveAllPlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_all_placeholder_space_enabled()
 		);
 	}
 

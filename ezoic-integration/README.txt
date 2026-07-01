@@ -64,6 +64,10 @@ Ezoic's WordPress plugin allows you to easily set up and manage ad placements us
 * **User Targeting:** Control which user roles see ads on your site
 * **URL Exclusions:** Specify pages or sections where ads should not be displayed
 
+To preview the "Reserve space for top ad placeholders" option before turning it
+on, add `?ez_reserve_placeholders=1` to a page URL. This temporarily reserves
+space for supported top ad placeholders on that page.
+
 The following guide will walk you through the complete setup process:
 [https://support.ezoic.com/kb/article/setting-up-ezoic-placeholders-with-the-ezoic-wordpress-plugin](https://support.ezoic.com/kb/article/setting-up-ezoic-placeholders-with-the-ezoic-wordpress-plugin)
 
@@ -110,6 +114,12 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.22.11 =
+* Bug fixes and stability improvements
+
+= 2.22.10 =
+* Add more flexible ad space reservation controls for custom ad layouts
+
 = 2.22.9 =
 * Add an optional Ad Placements setting to reserve space for top-of-page ads and improve CLS
 
