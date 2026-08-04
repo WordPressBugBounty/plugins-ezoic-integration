@@ -4,11 +4,18 @@ namespace Ezoic_Namespace;
 
 class Ezoic_CMS_Sync {
 
+	public function verify_content_request( $request ) {
+		return Ezoic_Content_Export::verify_content_signature(
+			$request->get_header( 'x-ezoic-content-auth' ),
+			(int) $request->get_header( 'x-ezoic-content-ts' )
+		);
+	}
+
 	public function ez_cms_sync_options_endpoint() {
 		register_rest_route( 'ezoic-cms/v1', '/sync/options', array(
 			'methods' => \WP_REST_Server::EDITABLE,
 			'callback' => array( $this, 'ez_cms_sync_options' ),
-			'permission_callback' => '__return_true',
+			'permission_callback' => array( $this, 'verify_content_request' ),
 			'show_in_index'       => false,
 		));
 	}
@@ -17,7 +24,7 @@ class Ezoic_CMS_Sync {
 		register_rest_route( 'ezoic-cms/v1', '/sync/theme', array(
 			'methods' => \WP_REST_Server::EDITABLE,
 			'callback' => array( $this, 'ez_cms_sync_origin_theme' ),
-			'permission_callback' => '__return_true',
+			'permission_callback' => array( $this, 'verify_content_request' ),
 			'show_in_index'       => false,
 		));
 	}
@@ -26,7 +33,7 @@ class Ezoic_CMS_Sync {
 		register_rest_route( 'ezoic-cms/v1', '/sync/linklists', array(
 			'methods' => \WP_REST_Server::EDITABLE,
 			'callback' => array( $this, 'ez_cms_get_menus_and_send' ),
-			'permission_callback' => '__return_true',
+			'permission_callback' => array( $this, 'verify_content_request' ),
 			'show_in_index'       => false,
 		));
 	}

@@ -114,6 +114,9 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.23.1 =
+* Security fixes.
+
 = 2.23.0 =
 * Added scroll rail ad support: enable scroll rails on elements matched by configured CSS classes or IDs (JavaScript integration)
 

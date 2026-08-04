@@ -17,12 +17,53 @@ abstract class Ezoic_Content_Export {
 	abstract public function get_module_name();
 
 	public function check_headers( $request ) {
-		// $is_export_request = $request->get_header( $this->get_request_header() );
-		// if ( is_null( $is_export_request ) || $is_export_request != 'true' ) {
-		// 	return false;
-		// }
+		return self::verify_content_signature(
+			$request->get_header( 'x-ezoic-content-auth' ),
+			(int) $request->get_header( 'x-ezoic-content-ts' )
+		);
+	}
 
-		return true;
+	/**
+	 * Verifies the HMAC signature that authenticates every content-module request.
+	 *
+	 * Signing contract (backend callers must match this byte-for-byte):
+	 *   X-Ezoic-Content-Ts:   current unix timestamp (seconds), accepted within +/- 300s
+	 *   X-Ezoic-Content-Auth: lowercase hex of HMAC-SHA256( key, message ) where
+	 *     key     = the site's Ezoic OAuth client secret (plaintext value of the
+	 *               'ezoic_auth_client_secret' option, issued at account linking)
+	 *     message = site_url() . ':' . ts
+	 *
+	 * site_url() is WordPress's exact stored value ('siteurl' option): scheme + host
+	 * (+ optional path), no trailing slash — e.g. "https://example.com". Callers must
+	 * sign the identical string; any scheme/host/trailing-slash difference fails
+	 * verification and returns 401 to the caller.
+	 *
+	 * Fails closed: a site with no linked Ezoic OAuth secret has no legitimate
+	 * content traffic, so every request is rejected.
+	 */
+	public static function verify_content_signature( $provided_hmac, $ts ) {
+		if ( empty( $provided_hmac ) || empty( $ts ) ) {
+			return false;
+		}
+
+		$enc = \get_option( 'ezoic_auth_client_secret' );
+		if ( ! $enc ) {
+			return false;
+		}
+
+		$secret = Ezoic_Auth::decrypt_secret( $enc );
+		if ( empty( $secret ) ) {
+			return false;
+		}
+
+		$ts = (int) $ts;
+		if ( abs( time() - $ts ) > 300 ) {
+			return false;
+		}
+
+		$expected = hash_hmac( 'sha256', \site_url() . ':' . $ts, $secret );
+
+		return hash_equals( $expected, (string) $provided_hmac );
 	}
 
 	protected function run_or_schedule_export( $request ) {

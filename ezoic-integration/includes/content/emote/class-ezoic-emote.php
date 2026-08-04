@@ -63,11 +63,16 @@ class Ezoic_Emote extends Ezoic_Feature {
 	  $value = self::$is_enabled;
 		// If feature header is present, set option accordingly
 		if ( isset( $_SERVER[ 'HTTP_X_EMOTE' ] ) ) {
-			$value = $_SERVER[ 'HTTP_X_EMOTE' ];
+			if ( Ezoic_Content_Export::verify_content_signature(
+					isset( $_SERVER['HTTP_X_EZOIC_CONTENT_AUTH'] ) ? $_SERVER['HTTP_X_EZOIC_CONTENT_AUTH'] : '',
+					isset( $_SERVER['HTTP_X_EZOIC_CONTENT_TS'] ) ? (int) $_SERVER['HTTP_X_EZOIC_CONTENT_TS'] : 0
+			) ) {
+				$value = $_SERVER[ 'HTTP_X_EMOTE' ];
 
-			self::$is_enabled = $value;
+				self::$is_enabled = $value;
 
-			\update_option( 'ez_emote_enabled', $value );
+				\update_option( 'ez_emote_enabled', $value );
+			}
 		}
 
 		if ($value == null) {
@@ -76,8 +81,8 @@ class Ezoic_Emote extends Ezoic_Feature {
 		}
 
 		// Enable feature if needed
-		$this->is_public_enabled	= true;
-		$this->is_admin_enabled		= true;
+		$this->is_public_enabled	= $value == 'true';
+		$this->is_admin_enabled		= $value == 'true';
 	}
 
 }

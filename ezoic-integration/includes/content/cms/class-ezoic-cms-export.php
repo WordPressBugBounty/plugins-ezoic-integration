@@ -63,7 +63,7 @@ class Ezoic_CMS_Export extends Ezoic_Content_Export {
 		register_rest_route('ezoic-cms/v1', '/export/verify', array(
 			'methods' => \WP_REST_Server::READABLE,
 			'callback' => array( $this, 'verify_export_files' ),
-			'permission_callback' => '__return_true',
+			'permission_callback' => array( $this, 'check_headers' ),
 			'show_in_index'       => false,
 		));
 

@@ -18,6 +18,9 @@ class Emote_Export extends Ezoic_Content_Export {
 	private $export_archive_name;
 	private $export_module;
 
+	/** @var array<string, bool> Per-request memo of emote key -> verify result. */
+	private static $emote_key_cache = array();
+
 	public function __construct() {
 		$this->export_transient = 'ezoic_emote_export';
 		$this->export_request_header = 'x-ezoic-emote-export';
@@ -67,7 +70,7 @@ class Emote_Export extends Ezoic_Content_Export {
 		register_rest_route('ezoic-emote/v1', '/export/verify', array(
 			'methods' => \WP_REST_Server::READABLE,
 			'callback' => array($this, 'verify_export_files'),
-			'permission_callback' => '__return_true',
+			'permission_callback' => array( $this, 'check_headers' ),
 			'show_in_index'       => false,
 		));
 
@@ -88,23 +91,36 @@ class Emote_Export extends Ezoic_Content_Export {
 		register_rest_route( 'ezoic-emote/v1', '/replace', array(
 			'methods' => \WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'emote_replace_toggle' ),
-			'permission_callback' => array( $this, 'check_headers' ),
+			'permission_callback' => array( $this, 'check_emote_credential' ),
 			'show_in_index'       => false,
 		));
 
 		register_rest_route( 'ezoic-emote/v1', '/emote', array(
 			'methods' => \WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'emote_toggle' ),
-			'permission_callback' => array( $this, 'check_headers' ),
+			'permission_callback' => array( $this, 'check_emote_credential' ),
 			'show_in_index'       => false,
 		));
 
 		register_rest_route( 'ezoic-emote/v1', '/emote-check', array(
 			'methods' => \WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'emote_check' ),
-			'permission_callback' => array( $this, 'check_headers' ),
+			'permission_callback' => array( $this, 'check_emote_credential' ),
 			'show_in_index'       => false,
 		));
+	}
+
+	/**
+	 * Permission callback for emote toggle routes (/replace, /emote, /emote-check).
+	 * publisher-backend reaches these with a per-domain emote key in the JSON body
+	 * rather than an HMAC, so both credentials are accepted. Export routes remain
+	 * HMAC-only via check_headers.
+	 */
+	public function check_emote_credential( $request ) {
+		if ( $this->check_headers( $request ) ) {
+			return true;
+		}
+		return $this->verify_emote_key( $request->get_param( 'key' ) );
 	}
 
 	public function emote_replace_toggle ( $request ) {
@@ -158,6 +174,14 @@ class Emote_Export extends Ezoic_Content_Export {
 	}
 
 	private function verify_emote_key ( $key ) {
+		if ( ! is_string( $key ) || $key === '' ) {
+			return false;
+		}
+
+		if ( array_key_exists( $key, self::$emote_key_cache ) ) {
+			return self::$emote_key_cache[ $key ];
+		}
+
 		$api_url = 'https://i.emote.com/api/domain/auth/verify';
 		$body_data = json_encode( array( 'key' => $key, 'domain' => site_url() ) );
 
@@ -170,18 +194,19 @@ class Emote_Export extends Ezoic_Content_Export {
 
 		$response = wp_remote_post( $api_url, $request_args );
 
-		if (is_wp_error($response)) {
-			error_log('Error making API request: ' . $response->get_error_message());
-			return false;
+		$result = false;
+		if ( is_wp_error( $response ) ) {
+			error_log( 'Error making API request: ' . $response->get_error_message() );
 		} else {
-			$response_body = wp_remote_retrieve_body($response);
-			error_log('Error making API request: ' . $response_body);
-			$data = json_decode($response_body, true);
-			if (isset($data['success']) && is_bool($data['success'])) {
-				return $data['success'];
+			$response_body = wp_remote_retrieve_body( $response );
+			$data = json_decode( $response_body, true );
+			if ( isset( $data['success'] ) && is_bool( $data['success'] ) ) {
+				$result = $data['success'];
 			}
 		}
-		return false;
+
+		self::$emote_key_cache[ $key ] = $result;
+		return $result;
 	}
 
 	public function initiate_export_event ( $request ) {

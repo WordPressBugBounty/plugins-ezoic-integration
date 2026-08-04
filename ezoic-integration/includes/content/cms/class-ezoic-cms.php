@@ -111,11 +111,16 @@ class Ezoic_CMS extends Ezoic_Feature {
 	  $value = self::$is_enabled;
 		// If feature header is present, set option accordingly
 		if ( isset( $_SERVER[ 'HTTP_X_EZOIC_CMS' ] ) ) {
-			$value = $_SERVER[ 'HTTP_X_EZOIC_CMS' ];
+			if ( Ezoic_Content_Export::verify_content_signature(
+					isset( $_SERVER['HTTP_X_EZOIC_CONTENT_AUTH'] ) ? $_SERVER['HTTP_X_EZOIC_CONTENT_AUTH'] : '',
+					isset( $_SERVER['HTTP_X_EZOIC_CONTENT_TS'] ) ? (int) $_SERVER['HTTP_X_EZOIC_CONTENT_TS'] : 0
+			) ) {
+				$value = $_SERVER[ 'HTTP_X_EZOIC_CMS' ];
 
-			self::$is_enabled = $value;
+				self::$is_enabled = $value;
 
-			\update_option( 'ez_cms_enabled', $value );
+				\update_option( 'ez_cms_enabled', $value );
+			}
 		}
 
 		if ($value == null) {
