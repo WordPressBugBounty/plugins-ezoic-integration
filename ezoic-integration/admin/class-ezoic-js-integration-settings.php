@@ -70,6 +70,22 @@ class Ezoic_JS_Integration_Settings
 			'ezoic_js_integration_section'
 		);
 
+		add_settings_field(
+			'js_enable_scroll_rails',
+			__('Enable Scroll Rails', 'ezoic'),
+			array($this, 'js_enable_scroll_rails_callback'),
+			'ezoic_js_integration_options',
+			'ezoic_js_integration_section'
+		);
+
+		add_settings_field(
+			'js_scroll_rail_selectors',
+			__('Scroll Rail Selectors', 'ezoic'),
+			array($this, 'js_scroll_rail_selectors_callback'),
+			'ezoic_js_integration_options',
+			'ezoic_js_integration_section'
+		);
+
 		register_setting(
 			'ezoic_js_integration_options',
 			'ezoic_js_integration_options',
@@ -90,7 +106,9 @@ class Ezoic_JS_Integration_Settings
 			'js_enable_privacy_scripts' => 1,
 			'js_use_wp_placeholders' => 1,
 			'js_reserve_placeholder_space' => 0,
-			'js_reserve_all_placeholder_space' => 0
+			'js_reserve_all_placeholder_space' => 0,
+			'js_enable_scroll_rails' => 0,
+			'js_scroll_rail_selectors' => ''
 		);
 	}
 
@@ -168,6 +186,76 @@ class Ezoic_JS_Integration_Settings
 	}
 
 	/**
+	 * Enable scroll rails field callback
+	 */
+	public function js_enable_scroll_rails_callback($args)
+	{
+		$options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+		$value = isset($options['js_enable_scroll_rails']) ? $options['js_enable_scroll_rails'] : 0;
+
+		$html = '<input type="checkbox" id="js_enable_scroll_rails" name="ezoic_js_integration_options[js_enable_scroll_rails]" value="1"' . checked(1, $value, false) . '/>';
+		$html .= '<label for="js_enable_scroll_rails">' . __('Enable scroll rail ads on matching page elements', 'ezoic') . '</label>';
+		$html .= '<p class="description">' . __('When enabled, Ezoic will initialize scroll rails on elements matched by the selectors below.', 'ezoic') . '</p>';
+
+		echo $html;
+	}
+
+	/**
+	 * Scroll rail selectors field callback
+	 */
+	public function js_scroll_rail_selectors_callback($args)
+	{
+		$options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+		$value = isset($options['js_scroll_rail_selectors']) ? $options['js_scroll_rail_selectors'] : '';
+
+		$html = '<textarea id="js_scroll_rail_selectors" name="ezoic_js_integration_options[js_scroll_rail_selectors]" rows="5" cols="50" class="large-text code">' . esc_attr($value) . '</textarea>';
+		$html .= '<p class="description">' . __('Enter one CSS class or element ID per line, using a leading "." or "#" (for example <code>.sidebar</code> or <code>#rail-left</code>). Maximum 10 selectors.', 'ezoic') . '</p>';
+
+		echo $html;
+	}
+
+	/**
+	 * Parse and whitelist scroll rail selectors from a newline-separated string.
+	 *
+	 * @param string $raw Newline-separated selector string.
+	 * @return array Whitelisted selectors (max 10), each matching ^[.#][A-Za-z0-9_-]{1,99}$.
+	 */
+	public static function parse_scroll_rail_selectors($raw)
+	{
+		$selectors = array();
+		$seen = array();
+		$lines = preg_split('/\r\n|\r|\n/', (string) $raw);
+
+		if (!is_array($lines)) {
+			return $selectors;
+		}
+
+		foreach ($lines as $line) {
+			$line = trim($line);
+			if ($line === '') {
+				continue;
+			}
+
+			if (!preg_match('/^[.#][A-Za-z0-9_-]{1,99}$/', $line)) {
+				continue;
+			}
+
+			if (isset($seen[$line])) {
+				continue;
+			}
+
+			$seen[$line] = true;
+			$selectors[] = $line;
+
+			if (count($selectors) >= 10) {
+				break;
+			}
+		}
+
+		return $selectors;
+	}
+
+	/**
 	 * Handle disabling JavaScript integration
 	 */
 	public function handle_disable_js_integration()
@@ -217,6 +305,9 @@ class Ezoic_JS_Integration_Settings
 		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
 		$sanitized['js_reserve_placeholder_space'] = isset($current_options['js_reserve_placeholder_space']) ? (int) (bool) $current_options['js_reserve_placeholder_space'] : 0;
 		$sanitized['js_reserve_all_placeholder_space'] = isset($current_options['js_reserve_all_placeholder_space']) ? (int) (bool) $current_options['js_reserve_all_placeholder_space'] : 0;
+		$sanitized['js_enable_scroll_rails'] = isset($settings['js_enable_scroll_rails']) ? 1 : 0;
+		$selector_raw = isset($settings['js_scroll_rail_selectors']) ? $settings['js_scroll_rail_selectors'] : '';
+		$sanitized['js_scroll_rail_selectors'] = implode("\n", self::parse_scroll_rail_selectors($selector_raw));
 
 		// Check if any relevant settings changed
 		$settings_changed = (
@@ -224,7 +315,9 @@ class Ezoic_JS_Integration_Settings
 			$current_options['js_enable_privacy_scripts'] !== $sanitized['js_enable_privacy_scripts'] ||
 			$current_options['js_use_wp_placeholders'] !== $sanitized['js_use_wp_placeholders'] ||
 			$current_options['js_reserve_placeholder_space'] !== $sanitized['js_reserve_placeholder_space'] ||
-			$current_options['js_reserve_all_placeholder_space'] !== $sanitized['js_reserve_all_placeholder_space']
+			$current_options['js_reserve_all_placeholder_space'] !== $sanitized['js_reserve_all_placeholder_space'] ||
+			$current_options['js_enable_scroll_rails'] !== $sanitized['js_enable_scroll_rails'] ||
+			$current_options['js_scroll_rail_selectors'] !== $sanitized['js_scroll_rail_selectors']
 		);
 
 		// Trigger plugin data send if settings changed

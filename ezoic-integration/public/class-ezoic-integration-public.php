@@ -26,6 +26,7 @@ class Ezoic_Integration_Public
 	private $version;
 	private $title_call_count = 0;
 	private $footer_call_count = 0;
+	private $ads_disabled_for_user = null;
 
 	/**
 	 * Initialize the class and set its properties.
@@ -377,6 +378,21 @@ class Ezoic_Integration_Public
 			$this->loader->add_action('wp_footer', $this, 'inject_fallback_showads', 15);
 		}
 
+		// Add scroll rail initialization when enabled with a non-empty selector list
+		// Preview mode does not force-enable scroll rails (selectors are publisher data)
+		$scroll_rails_enabled = isset($js_options['js_enable_scroll_rails']) && $js_options['js_enable_scroll_rails'];
+		$scroll_rail_selectors = array();
+		if ($scroll_rails_enabled && isset($js_options['js_scroll_rail_selectors'])) {
+			$scroll_rail_selectors = Ezoic_JS_Integration_Settings::parse_scroll_rail_selectors($js_options['js_scroll_rail_selectors']);
+		}
+		if (
+			((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode)
+			&& $scroll_rails_enabled
+			&& !empty($scroll_rail_selectors)
+		) {
+			$this->loader->add_action('wp_footer', $this, 'inject_scroll_rail_script', 15);
+		}
+
 		// Exclude Ezoic scripts from LiteSpeed Cache optimization if plugin is active
 		if (Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active()) {
 			$this->loader->add_filter('litespeed_optimize_js_excludes', $this, 'exclude_ezoic_scripts_from_litespeed', 10);
@@ -477,6 +493,78 @@ class Ezoic_Integration_Public
 			// No JS placeholders were inserted, add fallback showAds() call
 			echo '<script data-ezoic="1"' . $litespeed_attr . '>ezstandalone.cmd.push(function () { ezstandalone.showAds(); });</script>' . "\n";
 		}
+	}
+
+	/**
+	 * Inject scroll rail initialization for publisher-configured selectors
+	 */
+	public function inject_scroll_rail_script()
+	{
+		if ($this->is_admin_context()) {
+			return;
+		}
+
+		if ($this->should_disable_ads_for_user()) {
+			return;
+		}
+
+		$js_options = get_option('ezoic_js_integration_options', array());
+		if (!isset($js_options['js_enable_scroll_rails']) || !$js_options['js_enable_scroll_rails']) {
+			return;
+		}
+
+		$selector_raw = isset($js_options['js_scroll_rail_selectors']) ? $js_options['js_scroll_rail_selectors'] : '';
+		$selectors = Ezoic_JS_Integration_Settings::parse_scroll_rail_selectors($selector_raw);
+		if (empty($selectors)) {
+			return;
+		}
+
+		$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+		$selectors_json = wp_json_encode(array_values($selectors));
+
+		echo '<script data-ezoic="1"' . $litespeed_attr . '>';
+		echo 'window.ezstandalone = window.ezstandalone || {};';
+		echo 'ezstandalone.cmd = ezstandalone.cmd || [];';
+		echo 'ezstandalone.cmd.push(function () {';
+		echo 'if (typeof ezstandalone.showScrollRail !== "function") { return; }';
+		echo 'var selectors = ' . $selectors_json . ';';
+		echo 'var elements = [];';
+		echo 'var i, j, k, sel, matches, el, id, n, already;';
+		echo 'for (i = 0; i < selectors.length; i++) {';
+		// getElementById/getElementsByClassName avoid CSS selector parsing, which
+		// would throw on digit-leading names (e.g. #2023-header) that are valid
+		// HTML ids/classes but invalid CSS identifiers.
+		echo 'sel = selectors[i];';
+		echo 'if (sel.charAt(0) === "#") {';
+		echo 'el = document.getElementById(sel.slice(1));';
+		echo 'matches = el ? [el] : [];';
+		echo '} else {';
+		echo 'matches = document.getElementsByClassName(sel.slice(1));';
+		echo '}';
+		echo 'for (j = 0; j < matches.length; j++) {';
+		echo 'el = matches[j];';
+		echo 'already = false;';
+		echo 'for (k = 0; k < elements.length; k++) { if (elements[k] === el) { already = true; break; } }';
+		echo 'if (already) { continue; }';
+		echo 'elements.push(el);';
+		echo 'if (elements.length >= 10) { break; }';
+		echo '}';
+		echo 'if (elements.length >= 10) { break; }';
+		echo '}';
+		echo 'n = 1;';
+		echo 'for (i = 0; i < elements.length; i++) {';
+		echo 'el = elements[i];';
+		echo 'id = el.id;';
+		echo 'if (!id) {';
+		echo 'while (document.getElementById("ez-scroll-rail-" + n)) { n++; }';
+		echo 'id = "ez-scroll-rail-" + n;';
+		echo 'el.id = id;';
+		echo 'n++;';
+		echo '}';
+		echo 'ezstandalone.showScrollRail(id);';
+		echo '}';
+		echo '});';
+		echo '</script>' . "\n";
 	}
 
 	private function bypass_cache_filters()
@@ -690,17 +778,16 @@ class Ezoic_Integration_Public
 	 */
 	private function should_disable_ads_for_user()
 	{
-		static $cached = null;
-		if ($cached !== null) {
-			return $cached;
+		if ($this->ads_disabled_for_user !== null) {
+			return $this->ads_disabled_for_user;
 		}
 
 		if (isset($_COOKIE['x-ez-wp-noads']) && $_COOKIE['x-ez-wp-noads'] == '1') {
-			return $cached = true;
+			return $this->ads_disabled_for_user = true;
 		}
 
 		if (!is_user_logged_in()) {
-			return $cached = false;
+			return $this->ads_disabled_for_user = false;
 		}
 
 		if (class_exists('Ezoic_Namespace\Ezoic_AdTester_Config')) {
@@ -714,12 +801,12 @@ class Ezoic_Integration_Public
 				$diff             = array_diff($currentUserRoles, $disabledRoles);
 
 				if (count($currentUserRoles) !== count($diff)) {
-					return $cached = true;
+					return $this->ads_disabled_for_user = true;
 				}
 			}
 		}
 
-		return $cached = false;
+		return $this->ads_disabled_for_user = false;
 	}
 
 	/**
