@@ -196,6 +196,52 @@ class Ezoic_AdTester_Sidebar_Inserter extends Ezoic_AdTester_Inserter
 	}
 
 	/**
+	 * Whether legacy sidebar placeholders should be suppressed for scroll rail replacement.
+	 *
+	 * @param string $position_type Placeholder position type.
+	 * @return bool
+	 */
+	public static function should_replace_sidebar_placeholder($position_type)
+	{
+		if (!get_option('ezoic_js_integration_enabled', false)) {
+			return false;
+		}
+
+		$options = get_option('ezoic_js_integration_options', array());
+		if (empty($options['js_use_wp_placeholders'])) {
+			return false;
+		}
+
+		if (empty($options['js_auto_insert_scripts'])) {
+			return false;
+		}
+
+		if (empty($options['js_enable_scroll_rails'])) {
+			return false;
+		}
+
+		if (empty($options['js_scroll_rail_replace_sidebar'])) {
+			return false;
+		}
+
+		if (!class_exists(__NAMESPACE__ . '\\Ezoic_JS_Integration_Settings')) {
+			return false;
+		}
+
+		$selector_raw = isset($options['js_scroll_rail_selectors']) ? $options['js_scroll_rail_selectors'] : '';
+		$selectors = Ezoic_JS_Integration_Settings::parse_scroll_rail_selectors($selector_raw);
+		if (empty($selectors)) {
+			return false;
+		}
+
+		if ($position_type === 'sidebar_bottom' || strpos((string) $position_type, 'sidebar_floating') === 0) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Returns a map of relavent rules
 	 */
 	private function get_rules()
@@ -213,6 +259,16 @@ class Ezoic_AdTester_Sidebar_Inserter extends Ezoic_AdTester_Inserter
 
 				// Skip if we've already added this placement ID
 				if (in_array($placeholder->position_id, $added_placements)) {
+					continue;
+				}
+
+				if (self::should_replace_sidebar_placeholder($placeholder->position_type)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Sidebar rule rejected for scroll rail replacement: Placement {$placeholder->position_id} for position type {$placeholder->position_type}",
+						'Sidebar Ads',
+						'info',
+						$placeholder->position_id
+					);
 					continue;
 				}
 

@@ -92,7 +92,16 @@ if (class_exists('WP_Widget')) {
 					$ph_config->display != 'disabled' &&          // Rule is enabled
 					$ph_config->display == 'after_widget'         // Rule is a sidebar rule
 				) {
-					$rules[(int) $ph_config->display_option] = $config->placeholders[$ph_config->placeholder_id];
+					if (!isset($config->placeholders[$ph_config->placeholder_id])) {
+						continue;
+					}
+
+					$placeholder = $config->placeholders[$ph_config->placeholder_id];
+					if (Ezoic_AdTester_Sidebar_Inserter::should_replace_sidebar_placeholder($placeholder->position_type)) {
+						continue;
+					}
+
+					$rules[(int) $ph_config->display_option] = $placeholder;
 				}
 			}
 

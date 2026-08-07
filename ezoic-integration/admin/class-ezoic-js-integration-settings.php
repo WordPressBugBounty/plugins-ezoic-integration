@@ -86,6 +86,14 @@ class Ezoic_JS_Integration_Settings
 			'ezoic_js_integration_section'
 		);
 
+		add_settings_field(
+			'js_scroll_rail_replace_sidebar',
+			__('Replace Sidebar Placeholders', 'ezoic'),
+			array($this, 'js_scroll_rail_replace_sidebar_callback'),
+			'ezoic_js_integration_options',
+			'ezoic_js_integration_section'
+		);
+
 		register_setting(
 			'ezoic_js_integration_options',
 			'ezoic_js_integration_options',
@@ -108,7 +116,8 @@ class Ezoic_JS_Integration_Settings
 			'js_reserve_placeholder_space' => 0,
 			'js_reserve_all_placeholder_space' => 0,
 			'js_enable_scroll_rails' => 0,
-			'js_scroll_rail_selectors' => ''
+			'js_scroll_rail_selectors' => '',
+			'js_scroll_rail_replace_sidebar' => 0
 		);
 	}
 
@@ -196,6 +205,21 @@ class Ezoic_JS_Integration_Settings
 		$html = '<input type="checkbox" id="js_enable_scroll_rails" name="ezoic_js_integration_options[js_enable_scroll_rails]" value="1"' . checked(1, $value, false) . '/>';
 		$html .= '<label for="js_enable_scroll_rails">' . __('Enable scroll rail ads on matching page elements', 'ezoic') . '</label>';
 		$html .= '<p class="description">' . __('When enabled, Ezoic will initialize scroll rails on elements matched by the selectors below.', 'ezoic') . '</p>';
+
+		echo $html;
+	}
+
+	/**
+	 * Replace sidebar placeholders with scroll rails field callback
+	 */
+	public function js_scroll_rail_replace_sidebar_callback($args)
+	{
+		$options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
+		$value = isset($options['js_scroll_rail_replace_sidebar']) ? $options['js_scroll_rail_replace_sidebar'] : 0;
+
+		$html = '<input type="checkbox" id="js_scroll_rail_replace_sidebar" name="ezoic_js_integration_options[js_scroll_rail_replace_sidebar]" value="1"' . checked(1, $value, false) . '/>';
+		$html .= '<label for="js_scroll_rail_replace_sidebar">' . __('Replace legacy sidebar placeholders (floating and bottom) with scroll rails', 'ezoic') . '</label>';
+		$html .= '<p class="description">' . __('When enabled, legacy sidebar floating and bottom placeholders are removed so scroll rails can own the sidebar. Removal applies on all screen sizes, including mobile where the scroll rail does not run.', 'ezoic') . '</p>';
 
 		echo $html;
 	}
@@ -306,6 +330,7 @@ class Ezoic_JS_Integration_Settings
 		$sanitized['js_reserve_placeholder_space'] = isset($current_options['js_reserve_placeholder_space']) ? (int) (bool) $current_options['js_reserve_placeholder_space'] : 0;
 		$sanitized['js_reserve_all_placeholder_space'] = isset($current_options['js_reserve_all_placeholder_space']) ? (int) (bool) $current_options['js_reserve_all_placeholder_space'] : 0;
 		$sanitized['js_enable_scroll_rails'] = isset($settings['js_enable_scroll_rails']) ? 1 : 0;
+		$sanitized['js_scroll_rail_replace_sidebar'] = isset($settings['js_scroll_rail_replace_sidebar']) ? 1 : 0;
 		$selector_raw = isset($settings['js_scroll_rail_selectors']) ? $settings['js_scroll_rail_selectors'] : '';
 		$sanitized['js_scroll_rail_selectors'] = implode("\n", self::parse_scroll_rail_selectors($selector_raw));
 
@@ -317,6 +342,7 @@ class Ezoic_JS_Integration_Settings
 			$current_options['js_reserve_placeholder_space'] !== $sanitized['js_reserve_placeholder_space'] ||
 			$current_options['js_reserve_all_placeholder_space'] !== $sanitized['js_reserve_all_placeholder_space'] ||
 			$current_options['js_enable_scroll_rails'] !== $sanitized['js_enable_scroll_rails'] ||
+			$current_options['js_scroll_rail_replace_sidebar'] !== $sanitized['js_scroll_rail_replace_sidebar'] ||
 			$current_options['js_scroll_rail_selectors'] !== $sanitized['js_scroll_rail_selectors']
 		);
 

@@ -126,6 +126,13 @@ class Ezoic_AdPos extends Ezoic_Feature
 				$ph_config->display == 'after_widget' &&
 				(int) $ph_config->display_option > $widget_counter
 			) {
+				if (isset($config->placeholders[$ph_config->placeholder_id])) {
+					$placeholder = $config->placeholders[$ph_config->placeholder_id];
+					if (Ezoic_AdTester_Sidebar_Inserter::should_replace_sidebar_placeholder($placeholder->position_type)) {
+						continue;
+					}
+				}
+
 				$new_widgets[] = 'ezoic_adpos_widget-' . $insert_counter;
 				$widget_options[$insert_counter] = array(
 					'position' => (int) $ph_config->display_option

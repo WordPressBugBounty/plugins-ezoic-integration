@@ -114,6 +114,9 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.24.0 =
+* New option to replace sidebar ad placeholders with scroll rail ads (JavaScript integration)
+
 = 2.23.1 =
 * Security fixes.
 
@@ -170,12 +173,3 @@ Yes, you have full control over ad categories and can block specific ads. The pl
 
 = 2.21.0 =
 * Ad placement enhancements
-
-= 2.20.2 =
-* Fixed User Targeting role-based ad exclusions
-
-= 2.20.1 =
-* Improved plugin configuration and setup
-
-= 2.20.0 =
-* Improved ads.txt setup for JavaScript transition
