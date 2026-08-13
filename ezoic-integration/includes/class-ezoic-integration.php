@@ -234,6 +234,7 @@ namespace Ezoic_Namespace {
 			}
 
 			$this->loader->add_action('rest_api_init', $ad_settings, 'register_rest');
+			$this->loader->add_action('admin_enqueue_scripts', $ad_settings, 'enqueue_assets');
 
 			// We need to make sure that caching is not enabled while a pub is using a cloud integration. If the request is
 			// coming from a cloud integrated site, we turn caching off and clean up any cache files and modifications.

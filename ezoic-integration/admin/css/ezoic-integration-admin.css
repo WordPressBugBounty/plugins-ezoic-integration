@@ -143,3 +143,18 @@ input.ez_error {
 #ez_integration .ez_hidden {
 	display: none;
 }
+
+#ez_integration .button {
+	display: inline-flex;
+	align-items: center;
+}
+
+#ez_integration .button .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}

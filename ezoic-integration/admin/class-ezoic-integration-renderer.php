@@ -371,10 +371,17 @@ class Ezoic_Integration_Renderer {
 	public function check_time_callback() {
 		$options     = \get_option( 'ezoic_integration_status' );
 		$date_format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
-		$check_time  = ! empty( $options['check_time'] ) ? wp_date( $date_format, $options['check_time'] ) : '';
+		$stamp       = ! empty( $options['check_time'] ) ? (int) $options['check_time'] : 0;
+		if ( $stamp ) {
+			$check_time = function_exists( 'wp_date' )
+				? wp_date( $date_format, $stamp )
+				: date_i18n( $date_format, $stamp );
+		} else {
+			$check_time = '';
+		}
 
-		$html  = '<input type="hidden" id="check_time" name="ezoic_integration_status[check_time]" value="' . $options['check_time'] . '"/>';
-		$html .= '<div><em>' . $check_time . '</em> &nbsp;<a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=integration_status&recheck=1"><span class="dashicons dashicons-update" title="WordPress Integrated" style="text-decoration: none;"></span></a></div>';
+		$html  = '<input type="hidden" id="check_time" name="ezoic_integration_status[check_time]" value="' . esc_attr( (string) $stamp ) . '"/>';
+		$html .= '<div><em>' . esc_html( $check_time ) . '</em> &nbsp;<a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=integration_status&recheck=1"><span class="dashicons dashicons-update" title="WordPress Integrated" style="text-decoration: none;"></span></a></div>';
 
 		echo $html;
 	}

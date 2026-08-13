@@ -223,8 +223,21 @@ if (! function_exists('ez_utf8_converter')) {
 	function ez_utf8_converter($array)
 	{
 		array_walk_recursive($array, function (&$item, $key) {
-			if (! mb_detect_encoding($item, 'utf-8', true)) {
-				$item = utf8_encode($item);
+			if (! is_string($item) || $item === '') {
+				return;
+			}
+			if (function_exists('mb_detect_encoding') && mb_detect_encoding($item, 'UTF-8', true)) {
+				return;
+			}
+			if (function_exists('mb_convert_encoding')) {
+				$item = mb_convert_encoding($item, 'UTF-8', 'ISO-8859-1');
+				return;
+			}
+			if (function_exists('iconv')) {
+				$converted = iconv('ISO-8859-1', 'UTF-8//IGNORE', $item);
+				if ($converted !== false) {
+					$item = $converted;
+				}
 			}
 		});
 

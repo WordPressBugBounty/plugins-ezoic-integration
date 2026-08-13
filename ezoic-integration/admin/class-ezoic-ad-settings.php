@@ -29,6 +29,31 @@ class Ezoic_Integration_Ad_Settings
 		$this->adtester->initialize_config();
 	}
 
+	public function enqueue_assets()
+	{
+		if (!isset($_GET['page']) || $_GET['page'] !== EZOIC__PLUGIN_SLUG) {
+			return;
+		}
+		if (!isset($_GET['tab']) || $_GET['tab'] !== 'ad_settings') {
+			return;
+		}
+
+		wp_enqueue_style(
+			'ezoic-ad-settings-mdi',
+			plugin_dir_url(__FILE__) . 'css/mdi/css/materialdesignicons.min.css',
+			array(),
+			'5.9.55'
+		);
+		wp_enqueue_script(
+			'ezoic_integration',
+			plugin_dir_url(__FILE__) . 'js/ad-settings.js',
+			array(),
+			EZOIC_INTEGRATION_VERSION,
+			true
+		);
+		wp_deregister_script('js_files_for_wp_admin');
+	}
+
 	/**
 	 * Register RESTful endpoint for saving configuration
 	 */
@@ -480,12 +505,6 @@ class Ezoic_Integration_Ad_Settings
 		// Fetch domain status
 		$domain_status = new Ezoic_AdTester_Domain_Status(true);
 
-		// Load Vue-based interface
-		wp_enqueue_script('ezoic_integration', plugin_dir_url(__FILE__) . 'js/ad-settings.js', array(), rand(), true);
-
-		// Remove script which causes vuejs conflicts
-		wp_deregister_script('js_files_for_wp_admin');
-
 		// Fetch recent article for element picker, if needed
 		$recent_post_url = '/';
 		$recent_post_args = array('numberposts' => 1);
@@ -600,14 +619,12 @@ class Ezoic_Integration_Ad_Settings
 			),
 		);
 
-		$payload_json = \json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+		$payload_json = \wp_json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
 		if ($payload_json === false) {
 			error_log('Ezoic Ad Settings: failed to encode admin payload: ' . json_last_error_msg());
 			$payload_json = '{}';
 		}
 		?>
-		<link href="//fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-		<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
 		<script id="placeholder-payload" type="application/json"><?php echo $payload_json; ?></script>
 		<div id="app"></div>
 		<?php

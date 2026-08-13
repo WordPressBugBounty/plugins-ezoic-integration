@@ -4,7 +4,7 @@ Author URI: https://ezoic.com/
 Plugin URL: https://wordpress.org/plugins/ezoic-integration/
 Tags: ezoic, ads, monetization, ads.txt, revenue, optimization, ad testing, saas, analytics, video
 Requires at least: 5.2.0
-Tested up to: 6.9
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: trunk
 License: GPLv2 or later
@@ -114,6 +114,10 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.25.1 =
+* Compatibility with WordPress 7.1
+* Bug fixes and stability improvements
+
 = 2.25.0 =
 * Require PHP 7.4 or newer
 * Improve compatibility with WP Rocket
@@ -171,7 +175,4 @@ Yes, you have full control over ad categories and can block specific ads. The pl
 * Minor bug fixes
 
 = 2.21.2 =
-* Minor bug fixes
-
-= 2.21.1 =
 * Minor bug fixes
