@@ -20,7 +20,6 @@ require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-content-inserter3.php
 require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-page-inserter.php' );
 require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-html-inserter.php' );
 require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-sidebar-inserter.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-native-inserter.php' );
 
 // Configuration
 require_once( dirname( __FILE__ ) . '/class-ezoic-adtester-placeholder.php' );

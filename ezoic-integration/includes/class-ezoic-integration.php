@@ -184,6 +184,8 @@ namespace Ezoic_Namespace {
 
 			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-ezoic-emote-settings.php';
 
+			require_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-ezoic-integration-compatibility-check.php';
+
 
 			$this->loader   = new Ezoic_Integration_Loader();
 			$this->features = new Ezoic_Integration_Features($this->loader);
@@ -280,6 +282,20 @@ namespace Ezoic_Namespace {
 			// Add Settings link to the plugin.
 			$plugin_basename = plugin_basename(plugin_dir_path(__DIR__) . $this->plugin_name . '.php');
 			$this->loader->add_filter('plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links');
+
+			// WP Rocket conflict notice is stale for JS integration; remove ourselves after Rocket adds us.
+			$this->loader->add_filter(
+				'rocket_plugins_to_deactivate',
+				Ezoic_Integration_Compatibility_Check::class,
+				'suppress_wp_rocket_conflict_notice',
+				100
+			);
+			$this->loader->add_filter(
+				'rocket_plugins_to_deactivate_explanations',
+				Ezoic_Integration_Compatibility_Check::class,
+				'suppress_wp_rocket_conflict_explanations',
+				100
+			);
 		}
 
 		/**
@@ -388,10 +404,8 @@ namespace Ezoic_Namespace {
 				'Ezoic_AdTester',
 				'Ezoic_AdPos',
 				'Ezoic_Cdn',
-				'Ezoic_CMS',
 				'Ezoic_Emote',
 				'Ezoic_Leap',
-				'Ezoic_Microdata',
 				'Ezoic_AdsTxtManager',
 				'FacebookShareCache'
 			);

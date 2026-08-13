@@ -84,9 +84,16 @@ class Ezoic_Integration_Renderer {
 
 			<?php $this->render_tab_navigation( $active_tab, $atm_warning, $cdn_warning, $js_integration_warning, $ad_placements_warning ); ?>
 
-			<form method="post" action="options.php" id="ezoic_settings">
-				<?php $this->render_tab_content( $active_tab ); ?>
-			</form>
+			<?php
+			$wrap_options_form = ( $active_tab !== 'js_integration' && $active_tab !== 'ad_settings' );
+			if ( $wrap_options_form ) {
+				echo '<form method="post" action="options.php" id="ezoic_settings">';
+			}
+			$this->render_tab_content( $active_tab );
+			if ( $wrap_options_form ) {
+				echo '</form>';
+			}
+			?>
 
 			<?php
 			if ( $active_tab == 'js_integration' ) {
@@ -204,13 +211,6 @@ class Ezoic_Integration_Renderer {
 			// $init = new Ezoic_AdTester_Init();
 			// $init->initialize();
 		}
-	}
-
-	/**
-	 * Callback for ads settings section
-	 */
-	public function ads_settings_callback() {
-		echo 'Hello World!';
 	}
 
 	/**
@@ -756,7 +756,7 @@ class Ezoic_Integration_Renderer {
 			echo '<p>' . sprintf( __( 'The following duplicate scripts are detected on your site: %s. Having duplicate scripts can cause conflicts and performance issues.', 'ezoic' ), '<strong>' . implode( ', ', $warnings ) . '</strong>' ) . '</p>';
 			echo '<p><strong>' . __( 'Recommended Actions:', 'ezoic' ) . '</strong></p>';
 			echo '<ul style="margin-left: 20px; list-style: disc;">';
-			echo '<li>' . sprintf( __( 'Go to the <a href="%s">Integration settings</a> and disable the relevant script options', 'ezoic' ), admin_url( 'admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration' ) ) . '</li>';
+			echo '<li>' . sprintf( __( 'Go to the <a href="%s">Integration settings</a> and disable the relevant script options', 'ezoic' ), esc_url( admin_url( 'options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration' ) ) ) . '</li>';
 			echo '<li>' . __( 'Remove existing Ezoic scripts from your theme or other plugins', 'ezoic' ) . '</li>';
 			echo '<li>' . __( 'Re-enable the script options once other scripts are removed', 'ezoic' ) . '</li>';
 			echo '</ul>';
@@ -797,7 +797,7 @@ class Ezoic_Integration_Renderer {
 		echo '<div class="notice notice-warning" style="margin: 20px 0; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107;">';
 		echo '<h4 style="margin-top: 0; color: #856404;"><span class="dashicons dashicons-warning" style="vertical-align: middle; margin-right: 5px;"></span>' . __( 'Ad Placeholders Not Configured', 'ezoic' ) . '</h4>';
 		echo '<p>' . __( 'JavaScript integration is enabled with WordPress placeholders, but no ad placeholders have been configured yet. Configure your ad placements to start displaying ads on your site.', 'ezoic' ) . '</p>';
-		echo '<p><a class="button button-primary" href="' . admin_url( 'admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=ad_settings' ) . '" style="text-decoration: none;">' . __( 'Configure Ad Placements', 'ezoic' ) . '</a></p>';
+		echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=ad_settings' ) ) . '" style="text-decoration: none;">' . __( 'Configure Ad Placements', 'ezoic' ) . '</a></p>';
 		echo '</div>';
 	}
 }

@@ -386,16 +386,6 @@ class Ezoic_AdTester_Config
 		// Upgrade from version 1 to 2
 		if ($version === 1) {
 
-			// Backup config
-			// Serialize configuration
-			$serialized = \serialize($config);
-
-			// Encode configuration
-			$encoded = base64_encode($serialized);
-
-			// Store configuration
-			\update_option('ez_adtester_config_bak', $encoded);
-
 			$config->version = '2';
 
 			if (isset($config->placeholder_config) && \is_array($config->placeholder_config)) {

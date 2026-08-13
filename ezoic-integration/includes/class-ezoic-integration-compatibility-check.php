@@ -237,4 +237,227 @@ class Ezoic_Integration_Compatibility_Check
 		$is_active = is_plugin_active('litespeed-cache/litespeed-cache.php');
 		return $is_active;
 	}
+
+	/**
+	 * Remove Ezoic from WP Rocket's conflicting-plugins notice.
+	 *
+	 * WP Rocket still lists this plugin as incompatible based on the old
+	 * HTML/proxy integration. Current JS integration does not block Rocket
+	 * page caching, so the admin notice is incorrect.
+	 *
+	 * @param mixed $plugins Plugins WP Rocket recommends deactivating.
+	 * @return mixed
+	 */
+	public static function suppress_wp_rocket_conflict_notice($plugins)
+	{
+		if (!is_array($plugins)) {
+			return $plugins;
+		}
+
+		unset($plugins['ezoic']);
+
+		return $plugins;
+	}
+
+	/**
+	 * Remove the matching WP Rocket conflict explanation for Ezoic.
+	 *
+	 * @param mixed $explanations Conflict notice explanations keyed by plugin.
+	 * @return mixed
+	 */
+	public static function suppress_wp_rocket_conflict_explanations($explanations)
+	{
+		if (!is_array($explanations)) {
+			return $explanations;
+		}
+
+		unset($explanations['ezoic']);
+
+		return $explanations;
+	}
+
+	/**
+	 * Check if WP Rocket is active.
+	 *
+	 * @return bool
+	 */
+	public static function is_wp_rocket_active()
+	{
+		static $is_active = null;
+
+		if ($is_active !== null) {
+			return $is_active;
+		}
+
+		if (!function_exists('is_plugin_active')) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		$is_active = is_plugin_active('wp-rocket/wp-rocket.php');
+		return $is_active;
+	}
+
+	/**
+	 * Check if WP Rocket Delay JavaScript Execution is enabled.
+	 *
+	 * @return bool
+	 */
+	public static function is_wp_rocket_delay_js_enabled()
+	{
+		if (!self::is_wp_rocket_active()) {
+			return false;
+		}
+
+		if (function_exists('get_rocket_option')) {
+			return (bool) get_rocket_option('delay_js', false);
+		}
+
+		$settings = get_option('wp_rocket_settings', array());
+		return !empty($settings['delay_js']);
+	}
+
+	/**
+	 * Host patterns for Ezoic / consent / analytics script URLs.
+	 *
+	 * Used by Delay, Defer, Minify, and Combine external exclusions.
+	 * Matches support's manual exclusion list plus analytics.
+	 *
+	 * @return string[]
+	 */
+	public static function get_wp_rocket_host_exclusion_patterns()
+	{
+		return array(
+			'ezojs.com',
+			'ezoic.net',
+			'ezodn.com',
+			'gatekeeperconsent.com',
+			'ezoicanalytics.com',
+		);
+	}
+
+	/**
+	 * Patterns matched against full script tags by Delay JS exclusions.
+	 *
+	 * Hosts cover external scripts. Inline markers cover bootstrap / opt-out attrs.
+	 * Defer JS only matches script src URLs (hosts still apply; markers are no-ops there).
+	 *
+	 * @return string[]
+	 */
+	public static function get_wp_rocket_script_exclusion_patterns()
+	{
+		return array_merge(
+			self::get_wp_rocket_host_exclusion_patterns(),
+			array(
+				'ezstandalone',
+				'data-nowprocket',
+			)
+		);
+	}
+
+	/**
+	 * Merge patterns into a WP Rocket exclusion list without duplicates.
+	 *
+	 * @param mixed    $excludes Existing exclusion patterns.
+	 * @param string[] $patterns Patterns to add.
+	 * @return array
+	 */
+	public static function merge_wp_rocket_exclusion_patterns($excludes, $patterns)
+	{
+		if (!is_array($excludes)) {
+			$excludes = array();
+		}
+
+		foreach ($patterns as $pattern) {
+			if (!in_array($pattern, $excludes, true)) {
+				$excludes[] = $pattern;
+			}
+		}
+
+		return $excludes;
+	}
+
+	/**
+	 * Exclude Ezoic scripts from WP Rocket Delay / Defer JS lists.
+	 *
+	 * @param mixed $excludes Existing exclusion patterns.
+	 * @return array
+	 */
+	public static function exclude_ezoic_scripts_from_wp_rocket($excludes)
+	{
+		return self::merge_wp_rocket_exclusion_patterns(
+			$excludes,
+			self::get_wp_rocket_script_exclusion_patterns()
+		);
+	}
+
+	/**
+	 * Exclude Ezoic scripts from WP Rocket Delay JavaScript Execution.
+	 *
+	 * @param mixed $excludes Existing Delay JS exclusion patterns.
+	 * @return array
+	 */
+	public static function exclude_ezoic_scripts_from_wp_rocket_delay_js($excludes)
+	{
+		return self::exclude_ezoic_scripts_from_wp_rocket($excludes);
+	}
+
+	/**
+	 * Exclude Ezoic scripts from WP Rocket Load JavaScript deferred.
+	 *
+	 * @param mixed $excludes Existing defer exclusion patterns.
+	 * @return array
+	 */
+	public static function exclude_ezoic_scripts_from_wp_rocket_defer_js($excludes)
+	{
+		return self::exclude_ezoic_scripts_from_wp_rocket($excludes);
+	}
+
+	/**
+	 * Exclude Ezoic script hosts from WP Rocket Minify / Combine JS.
+	 *
+	 * rocket_exclude_js matches local file paths; rocket_minify_excluded_external_js
+	 * matches full external URLs (strpos). Host patterns cover the external path
+	 * Rocket uses when Minify JS is on.
+	 *
+	 * @param mixed $excludes Existing exclusion patterns.
+	 * @return array
+	 */
+	public static function exclude_ezoic_scripts_from_wp_rocket_minify_js($excludes)
+	{
+		return self::merge_wp_rocket_exclusion_patterns(
+			$excludes,
+			self::get_wp_rocket_host_exclusion_patterns()
+		);
+	}
+
+	/**
+	 * Keep Ezoic inline bootstrap out of WP Rocket Combine JS.
+	 *
+	 * @param mixed $excludes Existing inline content exclusion patterns.
+	 * @return array
+	 */
+	public static function exclude_ezoic_inline_from_wp_rocket_combine_js($excludes)
+	{
+		return self::merge_wp_rocket_exclusion_patterns($excludes, array('ezstandalone'));
+	}
+
+	/**
+	 * Attributes that opt injected scripts out of known cache-plugin optimizers.
+	 *
+	 * @return string
+	 */
+	public static function get_cache_plugin_script_attrs()
+	{
+		$attrs = '';
+
+		if (self::is_litespeed_cache_active()) {
+			$attrs .= ' data-no-optimize="1" data-no-defer="1"';
+		}
+
+		if (self::is_wp_rocket_delay_js_enabled()) {
+			$attrs .= ' data-nowprocket';
+		}
+
+		return $attrs;
+	}
 }

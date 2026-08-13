@@ -75,10 +75,6 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 
 		$integration_enabled = isset($integration_opt) && \is_array($integration_opt) && $integration_opt['disable_wp_integration'] == 0;
 
-		// CMS feature flag
-		$cms_opt = \get_option('ez_cms_enabled', 'false');
-		$cms_enabled = $cms_opt != 'false';
-
 		if ($integration_enabled) {
 			$cache_identifier = new Ezoic_Integration_Cache_Identifier();
 			$cache_identity   = $cache_identifier->get_cache_identity();
@@ -88,7 +84,7 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 			}
 		}
 
-		return $integration_enabled || $cms_enabled;
+		return $integration_enabled;
 	}
 
 	public static function is_special_route()

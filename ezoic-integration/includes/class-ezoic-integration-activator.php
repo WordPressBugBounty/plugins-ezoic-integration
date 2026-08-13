@@ -47,12 +47,16 @@ class Ezoic_Integration_Activator {
 		$ez_endpoints      = new Ezoic_Integration_WP_Endpoints();
 		$sql               = $ez_endpoints->get_table_create_statement();
 		$current_version   = $ez_endpoints->get_table_version();
-		$installed_version = \get_option( 'ezoic_db_option' );
+		$installed_version = \get_option( 'ezoic_db_version' );
+		if ( $installed_version === false ) {
+			$installed_version = \get_option( 'ezoic_db_option' );
+		}
 
 		if ( $installed_version !== $current_version ) {
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 			dbDelta( $sql );
 			update_option( 'ezoic_db_version', $current_version );
+			delete_option( 'ezoic_db_option' );
 		}
 
 		// Let's figure out if any caching is going on

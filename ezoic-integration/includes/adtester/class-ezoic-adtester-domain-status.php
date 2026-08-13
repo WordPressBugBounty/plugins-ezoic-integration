@@ -93,9 +93,5 @@ class Ezoic_AdTester_Domain_Status
 			$this->placeholder_count_other	= $data->placeholderCountOther;
 			$this->placeholder_count_wp		= $data->placeholderCountWordPress;
 		}
-
-		if ($this->placeholders_created) {
-			\delete_option('ez_adtester_generate');
-		}
 	}
 }

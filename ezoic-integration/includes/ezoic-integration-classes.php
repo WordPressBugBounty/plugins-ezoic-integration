@@ -28,7 +28,6 @@ require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-endpoints.php')
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-buffer-content-collector.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-file-content-collector.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-debug.php');
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-debug.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-identifier.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-endpoints.php');
 require_once( dirname( __FILE__ ) . '/class-ezoic-integrator.php');
@@ -49,38 +48,12 @@ require_once( dirname( __FILE__ ) . '/adstxtmanager/class-ezoic-adstxtmanager-em
 require_once( dirname( __FILE__ ) . '/adstxtmanager/class-ezoic-adstxtmanager-file-modifier.php' );
 require_once( dirname( __FILE__ ) . '/adstxtmanager/class-ezoic-adstxtmanager-htaccess-modifier.php' );
 
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-request-utils.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-curl-request.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-curl-response.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-filter.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-request.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-response.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-filter.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-endpoints.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-buffer-content-collector.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-file-content-collector.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-wp-debug.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-debug.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-identifier.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache-endpoints.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integrator.php' );
-require_once( dirname( __FILE__ ) . '/class-ezoic-integration-cache.php' );
-
-// Microdata
-require_once( dirname( __FILE__ ) . '/microdata/class-ezoic-microdata.php' );
-require_once( dirname( __FILE__ ) . '/microdata/class-ezoic-microdata-filters.php' );
-
-// Content - Shared b/w CMS and Emote
+// Content
 require_once( dirname( __FILE__ ) . '/content/class-ezoic-content-export.php' );
 require_once( dirname( __FILE__ ) . '/content/class-ezoic-content-request.php' );
 require_once( dirname( __FILE__ ) . '/content/class-ezoic-content-database.php' );
 require_once( dirname( __FILE__ ) . '/content/class-ezoic-content-file.php' );
 require_once( dirname( __FILE__ ) . '/content/class-ezoic-content-util.php' );
-
-// CMS
-require_once( dirname( __FILE__ ) . '/content/cms/class-ezoic-cms.php' );
-require_once( dirname( __FILE__ ) . '/content/cms/class-ezoic-cms-sync.php' );
-require_once( dirname( __FILE__ ) . '/content/cms/class-ezoic-cms-export.php' );
 
 // Emote
 require_once( dirname( __FILE__ ). '/content/emote/class-ezoic-emote-public.php' );

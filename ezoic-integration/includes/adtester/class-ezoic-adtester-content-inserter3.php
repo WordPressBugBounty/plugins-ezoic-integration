@@ -6,11 +6,7 @@ class Ezoic_AdTester_Content_Inserter3 extends Ezoic_AdTester_Inserter
 {
 	public function __construct($config)
 	{
-		if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
-			require_once(dirname(__FILE__) . '/../vendor/phpQuery_8.php');
-		} else {
-			require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
-		}
+		require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
 
 		parent::__construct($config);
 	}

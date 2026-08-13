@@ -84,7 +84,7 @@ class Ezoic_Integration_Ad_Settings
 			'callback'					=> array($this, 'retrieve_placeholders'),
 			'args'						=> array(),
 			'permission_callback'	=> function () {
-				return true;
+				return $this->validate_user();
 			},
 			'show_in_index'			=> false
 		));
@@ -500,39 +500,6 @@ class Ezoic_Integration_Ad_Settings
 		} else {
 			$recent_post_url .= '?ez_orig=1&ez_js_disable=1';
 		}
-		// Properly format config so the editor can deserialize it
-		$excerptTags = '[]';
-		if (isset($this->adtester->config->excerpt_tags) && is_array($this->adtester->config->excerpt_tags)) {
-			$excerptTags = \json_encode($this->adtester->config->excerpt_tags);
-		}
-
-		$paragraphTags = '[]';
-		if (isset($this->adtester->config->paragraph_tags) && is_array($this->adtester->config->paragraph_tags)) {
-			$paragraphTags = \json_encode($this->adtester->config->paragraph_tags);
-		}
-
-		$excludeClasses = '[]';
-		if (isset($this->adtester->config->exclude_class_list) && is_array($this->adtester->config->exclude_class_list)) {
-			$excludeClasses = \json_encode($this->adtester->config->exclude_class_list);
-		}
-
-		$excludeParents = '[]';
-		if (isset($this->adtester->config->parent_filters) && is_array($this->adtester->config->parent_filters)) {
-			$excludeParents = \json_encode($this->adtester->config->parent_filters);
-		}
-
-		$excludeWordCount = isset($this->adtester->config->skip_word_count) && $this->adtester->config->skip_word_count !== null ? $this->adtester->config->skip_word_count : 10;
-
-		$userRolesWithAdsDisabled = '[]';
-		if (isset($this->adtester->config->user_roles_with_ads_disabled)) {
-			$userRolesWithAdsDisabled = \json_encode($this->adtester->config->user_roles_with_ads_disabled);
-		}
-
-		$metaTags = '[]';
-		if (isset($this->adtester->config->meta_tags)) {
-			$metaTags = \json_encode($this->adtester->config->meta_tags);
-		}
-
 		$placeholderArray = array();
 		foreach ($this->adtester->config->placeholders as $placeholder) {
 			$revenue = null;
@@ -540,7 +507,6 @@ class Ezoic_Integration_Ad_Settings
 				$revenue = $this->adtester->revenues[$placeholder->position_id]->revenue_percentage;
 			}
 
-			// Always send the original Position ID to frontend - let frontend handle filtering
 			$placeholderArray[] = array(
 				'id' => $placeholder->id,
 				'positionId' => $placeholder->position_id,
@@ -550,9 +516,16 @@ class Ezoic_Integration_Ad_Settings
 			);
 		}
 
-		$excludeUrls = '[]';
-		if (isset($this->adtester->config->exclude_urls)) {
-			$excludeUrls = \json_encode($this->adtester->config->exclude_urls);
+		$configArray = array();
+		if (!empty($this->adtester->config->placeholder_config)) {
+			foreach ($this->adtester->config->placeholder_config as $config) {
+				$configArray[] = array(
+					'pageType' => $config->page_type,
+					'placeholderId' => $config->placeholder_id,
+					'display' => $config->display,
+					'displayOption' => $config->display_option
+				);
+			}
 		}
 
 		$plugin_initialized = \get_option('ez_ad_initialized');
@@ -561,236 +534,114 @@ class Ezoic_Integration_Ad_Settings
 			$placeholders_generated = false;
 		}
 
-		// Pass configuration values and set mount-point
-?>
+		$exclude_word_count = isset($this->adtester->config->skip_word_count) && $this->adtester->config->skip_word_count !== null
+			? $this->adtester->config->skip_word_count
+			: 10;
+
+		$payload = array(
+			'status' => array(
+				'hasError' => (bool) $domain_status->has_error,
+				'errorMessage' => $domain_status->error_message,
+				'monetizationEligible' => $domain_status->monetization_eligible === true,
+				'placeholdersCreated' => $placeholders_generated === true,
+				'placeholderCountOther' => $domain_status->placeholder_count_other,
+				'placeholderCountWp' => $domain_status->placeholder_count_wp,
+			),
+			'endpoints' => array(
+				'saveRule' => \get_rest_url(null, 'ezoic/v1/save-rule'),
+				'saveSettings' => \get_rest_url(null, 'ezoic/v1/save-settings'),
+				'resetSettings' => \get_rest_url(null, 'ezoic/v1/reset-settings'),
+				'retrievePlaceholders' => \get_rest_url(null, 'ezoic/v1/retrieve-placeholders'),
+				'clearDefaults' => \get_rest_url(null, 'ezoic/v1/clear-defaults'),
+				'domainStatus' => \get_rest_url(null, 'ezoic/v1/domain-status'),
+				'forceGenerate' => \get_rest_url(null, 'ezoic/v1/force-generate'),
+				'getConfig' => \get_rest_url(null, 'ezoic/v1/get-config'),
+			),
+			'nonce' => \wp_create_nonce('wp_rest'),
+			'baseURL' => \plugin_dir_url(__FILE__),
+			'recentPostUrl' => $recent_post_url,
+			'pageTypes' => $this->placeholder_page_types(),
+			'placeholderConfig' => $configArray,
+			'placeholders' => $placeholderArray,
+			'revenues' => $this->adtester->revenues,
+			'general' => array(
+				'activePlacements' => $this->adtester->config->active_placements,
+				'adminUrl' => \admin_url(),
+				'availableSidebars' => $this->get_wordpress_sidebars(),
+				'enableAdPos' => (bool) $this->adtester->config->enable_adpos_integration,
+				'enablePlacementIdSelection' => (bool) $this->adtester->config->enable_placement_id_selection,
+				'excerptTags' => (isset($this->adtester->config->excerpt_tags) && is_array($this->adtester->config->excerpt_tags))
+					? $this->adtester->config->excerpt_tags
+					: array(),
+				'excludeClasses' => (isset($this->adtester->config->exclude_class_list) && is_array($this->adtester->config->exclude_class_list))
+					? $this->adtester->config->exclude_class_list
+					: array(),
+				'excludeParents' => (isset($this->adtester->config->parent_filters) && is_array($this->adtester->config->parent_filters))
+					? $this->adtester->config->parent_filters
+					: array(),
+				'excludeUrls' => isset($this->adtester->config->exclude_urls)
+					? $this->adtester->config->exclude_urls
+					: array(),
+				'excludeWordCount' => (string) $exclude_word_count,
+				'jsIntegrationEnabled' => (bool) get_option('ezoic_js_integration_enabled', false),
+				'metaTags' => isset($this->adtester->config->meta_tags)
+					? $this->adtester->config->meta_tags
+					: array(),
+				'paragraphTags' => (isset($this->adtester->config->paragraph_tags) && is_array($this->adtester->config->paragraph_tags))
+					? $this->adtester->config->paragraph_tags
+					: array(),
+				'reservePlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false),
+				'reserveAllPlaceholderSpace' => Ezoic_AdTester_Placeholder::is_reserve_all_placeholder_space_enabled(),
+				'sidebarId' => (string) $this->adtester->config->sidebar_id,
+				'userRoles' => $this->get_user_roles(),
+				'userRolesWithAdsDisabled' => isset($this->adtester->config->user_roles_with_ads_disabled)
+					? $this->adtester->config->user_roles_with_ads_disabled
+					: array(),
+			),
+		);
+
+		$payload_json = \json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+		if ($payload_json === false) {
+			error_log('Ezoic Ad Settings: failed to encode admin payload: ' . json_last_error_msg());
+			$payload_json = '{}';
+		}
+		?>
 		<link href="//fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 		<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
-
-		<script id="placeholder-payload" type="application/json">
-			{
-				"status": {
-					"hasError": <?php if ($domain_status->has_error) {
-									echo 'true';
-								} else {
-									echo 'false';
-								} ?>,
-					"errorMessage": <?php echo \json_encode($domain_status->error_message, JSON_HEX_QUOT) ?>,
-					"monetizationEligible": <?php if ($domain_status->monetization_eligible === true) {
-												echo 'true';
-											} else {
-												echo 'false';
-											} ?>,
-					"placeholdersCreated": <?php if ($placeholders_generated === true) {
-												echo 'true';
-											} else {
-												echo 'false';
-											} ?>,
-					"placeholderCountOther": <?php echo $domain_status->placeholder_count_other ?>,
-					"placeholderCountWp": <?php echo $domain_status->placeholder_count_wp ?>
-				},
-				"endpoints": {
-					"saveRule": "<?php echo \get_rest_url(null, "ezoic/v1/save-rule") ?>",
-					"saveSettings": "<?php echo \get_rest_url(null, "ezoic/v1/save-settings") ?>",
-					"resetSettings": "<?php echo \get_rest_url(null, "ezoic/v1/reset-settings") ?>",
-					"retrievePlaceholders": "<?php echo \get_rest_url(null, "ezoic/v1/retrieve-placeholders") ?>",
-					"clearDefaults": "<?php echo \get_rest_url(null, "ezoic/v1/clear-defaults") ?>",
-					"domainStatus": "<?php echo \get_rest_url(null, "ezoic/v1/domain-status") ?>",
-					"forceGenerate": "<?php echo \get_rest_url(null, "ezoic/v1/force-generate") ?>",
-					"getConfig": "<?php echo \get_rest_url(null, "ezoic/v1/get-config") ?>"
-				},
-				"nonce": "<?php echo \wp_create_nonce('wp_rest') ?>",
-				"baseURL": "<?php echo \plugin_dir_url(__FILE__) ?>",
-				"recentPostUrl": "<?php echo $recent_post_url ?>",
-				"pageTypes": [{
-					"type": "post",
-					"name": "Post",
-					"displayOptions": [{
-						"id": "disabled",
-						"name": "Disabled"
-					}, {
-						"id": "before_content",
-						"name": "Before Content",
-						"hasOption": false
-					}, {
-						"id": "after_content",
-						"name": "After Content",
-						"hasOption": false
-					}, {
-						"id": "before_paragraph",
-						"name": "Before Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_paragraph",
-						"name": "After Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_widget",
-						"name": "After Widget",
-						"hasOption": true
-					}, {
-						"id": "before_element",
-						"name": "Before HTML Element",
-						"hasOption": true
-					}, {
-						"id": "after_element",
-						"name": "After HTML Element",
-						"hasOption": true
-					}]
-				}, {
-					"type": "page",
-					"name": "Page",
-					"displayOptions": [{
-						"id": "disabled",
-						"name": "Disabled"
-					}, {
-						"id": "before_content",
-						"name": "Before Content",
-						"hasOption": false
-					}, {
-						"id": "after_content",
-						"name": "After Content",
-						"hasOption": false
-					}, {
-						"id": "before_paragraph",
-						"name": "Before Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_paragraph",
-						"name": "After Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_widget",
-						"name": "After Widget",
-						"hasOption": true
-					}, {
-						"id": "before_element",
-						"name": "Before HTML Element",
-						"hasOption": true
-					}, {
-						"id": "after_element",
-						"name": "After HTML Element",
-						"hasOption": true
-					}]
-				}, {
-					"type": "home",
-					"name": "Home Page",
-					"displayOptions": [{
-						"id": "disabled",
-						"name": "Disabled"
-					}, {
-						"id": "before_paragraph",
-						"name": "Before Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_paragraph",
-						"name": "After Paragraph",
-						"hasOption": true
-					}, {
-						"id": "before_excerpt",
-						"name": "Before Excerpt",
-						"hasOption": true
-					}, {
-						"id": "after_excerpt",
-						"name": "After Excerpt",
-						"hasOption": true
-					}, {
-						"id": "after_widget",
-						"name": "After Widget",
-						"hasOption": true
-					}, {
-						"id": "before_element",
-						"name": "Before HTML Element",
-						"hasOption": true
-					}, {
-						"id": "after_element",
-						"name": "After HTML Element",
-						"hasOption": true
-					}]
-				}, {
-					"type": "category",
-					"name": "Category",
-					"displayOptions": [{
-						"id": "disabled",
-						"name": "Disabled"
-					}, {
-						"id": "before_paragraph",
-						"name": "Before Paragraph",
-						"hasOption": true
-					}, {
-						"id": "after_paragraph",
-						"name": "After Paragraph",
-						"hasOption": true
-					}, {
-						"id": "before_excerpt",
-						"name": "Before Excerpt",
-						"hasOption": true
-					}, {
-						"id": "after_excerpt",
-						"name": "After Excerpt",
-						"hasOption": true
-					}, {
-						"id": "after_widget",
-						"name": "After Widget",
-						"hasOption": true
-					}, {
-						"id": "before_element",
-						"name": "Before HTML Element",
-						"hasOption": true
-					}, {
-						"id": "after_element",
-						"name": "After HTML Element",
-						"hasOption": true
-					}]
-				}],
-			"placeholderConfig": <?php
-				$configArray = array();
-				if (!empty($this->adtester->config->placeholder_config)) {
-					foreach ($this->adtester->config->placeholder_config as $config) {
-						$configArray[] = array(
-							'pageType' => $config->page_type,
-							'placeholderId' => $config->placeholder_id,
-							'display' => $config->display,
-							'displayOption' => $config->display_option
-						);
-					}
-				}
-				echo \json_encode($configArray);
-			?>,
-				"placeholders": <?php echo \json_encode($placeholderArray); ?>,
-				"revenues": <?php echo \json_encode($this->adtester->revenues); ?>,
-				"general": {
-					"activePlacements": <?php echo \json_encode($this->adtester->config->active_placements) ?>,
-					"adminUrl": "<?php echo admin_url() ?>",
-					"availableSidebars": <?php echo \json_encode($this->get_wordpress_sidebars()) ?>,
-					"enableAdPos": <?php if ($this->adtester->config->enable_adpos_integration) {
-										echo 'true';
-									} else {
-										echo 'false';
-									} ?>,
-					"enablePlacementIdSelection": <?php if ($this->adtester->config->enable_placement_id_selection) {
-														echo 'true';
-													} else {
-														echo 'false';
-													} ?>,
-					"excerptTags": <?php echo $excerptTags ?>,
-					"excludeClasses": <?php echo $excludeClasses ?>,
-					"excludeParents": <?php echo $excludeParents ?>,
-					"excludeUrls": <?php echo $excludeUrls ?>,
-					"excludeWordCount": "<?php echo $excludeWordCount ?>",
-					"jsIntegrationEnabled": <?php echo get_option('ezoic_js_integration_enabled', false) ? 'true' : 'false'; ?>,
-					"metaTags": <?php echo $metaTags ?>,
-					"paragraphTags": <?php echo $paragraphTags ?>,
-					"reservePlaceholderSpace": <?php echo Ezoic_AdTester_Placeholder::is_reserve_placeholder_space_enabled(false) ? 'true' : 'false'; ?>,
-					"reserveAllPlaceholderSpace": <?php echo Ezoic_AdTester_Placeholder::is_reserve_all_placeholder_space_enabled() ? 'true' : 'false'; ?>,
-					"sidebarId": "<?php echo $this->adtester->config->sidebar_id ?>",
-					"userRoles": <?php echo \json_encode($this->get_user_roles()) ?>,
-					"userRolesWithAdsDisabled": <?php echo $userRolesWithAdsDisabled ?>
-				}
-			}
-		</script>
-
+		<script id="placeholder-payload" type="application/json"><?php echo $payload_json; ?></script>
 		<div id="app"></div>
-<?php
+		<?php
+	}
+
+	private function placeholder_page_types()
+	{
+		$content_options = array(
+			array('id' => 'disabled', 'name' => 'Disabled'),
+			array('id' => 'before_content', 'name' => 'Before Content', 'hasOption' => false),
+			array('id' => 'after_content', 'name' => 'After Content', 'hasOption' => false),
+			array('id' => 'before_paragraph', 'name' => 'Before Paragraph', 'hasOption' => true),
+			array('id' => 'after_paragraph', 'name' => 'After Paragraph', 'hasOption' => true),
+			array('id' => 'after_widget', 'name' => 'After Widget', 'hasOption' => true),
+			array('id' => 'before_element', 'name' => 'Before HTML Element', 'hasOption' => true),
+			array('id' => 'after_element', 'name' => 'After HTML Element', 'hasOption' => true),
+		);
+		$excerpt_options = array(
+			array('id' => 'disabled', 'name' => 'Disabled'),
+			array('id' => 'before_paragraph', 'name' => 'Before Paragraph', 'hasOption' => true),
+			array('id' => 'after_paragraph', 'name' => 'After Paragraph', 'hasOption' => true),
+			array('id' => 'before_excerpt', 'name' => 'Before Excerpt', 'hasOption' => true),
+			array('id' => 'after_excerpt', 'name' => 'After Excerpt', 'hasOption' => true),
+			array('id' => 'after_widget', 'name' => 'After Widget', 'hasOption' => true),
+			array('id' => 'before_element', 'name' => 'Before HTML Element', 'hasOption' => true),
+			array('id' => 'after_element', 'name' => 'After HTML Element', 'hasOption' => true),
+		);
+
+		return array(
+			array('type' => 'post', 'name' => 'Post', 'displayOptions' => $content_options),
+			array('type' => 'page', 'name' => 'Page', 'displayOptions' => $content_options),
+			array('type' => 'home', 'name' => 'Home Page', 'displayOptions' => $excerpt_options),
+			array('type' => 'category', 'name' => 'Category', 'displayOptions' => $excerpt_options),
+		);
 	}
 
 	/**

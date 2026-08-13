@@ -188,7 +188,7 @@ class Ezoic_JS_Integration_Settings
 		$html .= '<label for="js_use_wp_placeholders">' . __('Use WordPress-generated ad placeholders', 'ezoic') . '</label>';
 		$html .= '<p class="description">' . sprintf(
 			__('Use ad placeholders that are automatically inserted by <a href="%s">Ad Placements</a>. When disabled, placeholders must be inserted manually.', 'ezoic'),
-			admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=ad_settings')
+			admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=ad_settings')
 		) . '</p>';
 
 		echo $html;
@@ -307,7 +307,7 @@ class Ezoic_JS_Integration_Settings
 			// delete_option('ezoic_js_integration_options');
 
 			// Redirect to Integration tab
-			wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
+			wp_safe_redirect(admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
 			exit;
 		}
 	}
@@ -631,9 +631,11 @@ class Ezoic_JS_Integration_Settings
 
 		// Only show settings if JS integration is enabled
 		if (get_option('ezoic_js_integration_enabled', false)) {
+			echo '<form method="post" action="options.php" id="ezoic_settings">';
 			settings_fields('ezoic_js_integration_options');
 			do_settings_sections('ezoic_js_integration_options');
 			submit_button('Save Settings');
+			echo '</form>';
 		} else {
 			// Just show the turn on button directly, don't call do_settings_sections
 			echo '<h3>' . __('JavaScript Integration Settings', 'ezoic') . '</h3>';
@@ -672,7 +674,7 @@ class Ezoic_JS_Integration_Settings
 					<?php endif; ?>
 				</div>
 				<p style="color: #666;"><?php _e('Turn off automatic JavaScript integration.', 'ezoic'); ?></p>
-				<form method="post" action="<?php echo admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration'); ?>" style="display: inline;">
+				<form method="post" action="<?php echo esc_url( admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration') ); ?>" style="display: inline;">
 					<?php wp_nonce_field('disable_js_integration_nonce', 'js_integration_disable_nonce'); ?>
 					<input type="hidden" name="action" value="disable_js_integration" />
 					<input type="submit" name="disable_js_integration" class="button button-link-delete" value="<?php _e('Turn Off', 'ezoic'); ?>" />

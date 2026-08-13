@@ -174,12 +174,11 @@ if (!function_exists('ez_encode_unicode')) {
 			return $content;
 		}
 
-		// Step 1: Extract <script> blocks. We don't want to encode characters inside script blocks.
+		// Step 1: Extract <script> and <style> blocks. Encoding inside either breaks CSS content values and JS strings.
 		$script_placeholders = array();
-		$content = preg_replace_callback('/<script\b[^>]*>(.*?)<\/script>/is', function ($matches) use (&$script_placeholders) {
-			// Replace script content with a placeholder
+		$content = preg_replace_callback('/<(script|style)\b[^>]*>.*?<\/\1>/is', function ($matches) use (&$script_placeholders) {
 			$placeholder = '<!--SCRIPT_PLACEHOLDER_' . count($script_placeholders) . '-->';
-			$script_placeholders[] = $matches[0]; // Store the entire <script> block
+			$script_placeholders[] = $matches[0];
 			return $placeholder;
 		}, $content);
 

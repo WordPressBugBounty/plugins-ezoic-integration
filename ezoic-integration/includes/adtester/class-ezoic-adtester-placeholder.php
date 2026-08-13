@@ -383,8 +383,8 @@ class Ezoic_AdTester_Placeholder
 			$styleBlock = $this->placeholder_reservation_style_block();
 			$dataAttr   = $this->placeholder_attributes();
 
-			// Add LiteSpeed exclusion attributes if LiteSpeed Cache is active
-			$litespeed_attr = Ezoic_Integration_Compatibility_Check::is_litespeed_cache_active() ? ' data-no-optimize="1" data-no-defer="1"' : '';
+			// Opt out of LiteSpeed / WP Rocket Delay JS when those features are active
+			$litespeed_attr = Ezoic_Integration_Compatibility_Check::get_cache_plugin_script_attrs();
 
 			// If ads are disabled, return placeholder without showAds() call
 			if ($ads_disabled) {

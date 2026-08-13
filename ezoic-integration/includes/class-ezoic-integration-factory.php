@@ -6,7 +6,7 @@ namespace {
 
 namespace Ezoic_Namespace {
 	if ( ! defined( 'EZOIC_INTEGRATION_VERSION' ) ) {
-		define( 'EZOIC_INTEGRATION_VERSION', '2.24.0' ); // update plugin version number
+		define( 'EZOIC_INTEGRATION_VERSION', '2.25.0' ); // update plugin version number
 	}
 
 	if ( ! defined( 'EZOIC_API_VERSION' ) ) {

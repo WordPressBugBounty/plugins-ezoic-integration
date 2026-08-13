@@ -202,12 +202,8 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
-		// Pull-in phpQuery to parse the document (use PHP 8+ compatible build)
-		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
-			require_once(dirname(__FILE__) . '/../vendor/phpQuery_8.php');
-		} else {
-			require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
-		}
+		// Pull-in phpQuery to parse the document
+		require_once(dirname(__FILE__) . '/../vendor/phpQuery.php');
 
 		// Protect JavaScript and style content from phpQuery HTML parsing
 		$protected_content = array();
@@ -288,35 +284,5 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 		$processed_content = $this->restore_js_content($processed_content, $protected_content);
 
 		return $body_tag_matches[0] . $body_tag_matches[1] . $processed_content;
-	}
-
-	/**
-	 * Imports elements into the DOM
-	 * @param $nodes Nodes to import
-	 * @param $parent Parent node of the $target element
-	 * @param $target Target element before which nodes should be inserted
-	 */
-	private function insert_nodes($nodes, $parent, $target)
-	{
-		$reversed_nodes = array_reverse($nodes);
-		$current_node = $target;
-		foreach ($reversed_nodes as $node) {
-			$parent->insertBefore($node, $current_node);
-			$current_node = $node;
-		}
-	}
-
-	/**
-	 * Creates a DOMNode from markup
-	 */
-	private function create_nodes($markup)
-	{
-		$node = new \DOMDocument();
-
-		@$node->loadHTML('<span>' . $markup . '</span>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-
-		$nodesToInsert = $node->getElementsByTagName('span')->item(0)->childNodes;
-
-		return $nodesToInsert;
 	}
 }

@@ -139,10 +139,9 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 
 		if (!is_wp_error($response)) {
 			$response_code = wp_remote_retrieve_response_code($response);
-			$response_headers = wp_remote_retrieve_headers($response);
+			$redirect_location = wp_remote_retrieve_header($response, 'location');
 
-			if ($response_code >= 301 && $response_code <= 308 && isset($response_headers['location'])) {
-				$redirect_location = $response_headers['location'];
+			if ($response_code >= 301 && $response_code <= 308 && is_string($redirect_location) && $redirect_location !== '') {
 
 				if (strpos($redirect_location, 'srv.adstxtmanager.com') !== false) {
 					$final_response = wp_remote_get($redirect_location, array(

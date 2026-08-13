@@ -28,7 +28,7 @@ class Ezoic_Integration_Plugin_Data_Service
 	{
 		global $wp;
 
-		$domain = home_url($wp->request ?? '');
+		$domain = home_url(isset($wp->request) ? $wp->request : '');
 		$domain = wp_parse_url($domain)['host'];
 
 		// Check JavaScript integration settings

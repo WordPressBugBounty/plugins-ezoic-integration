@@ -183,7 +183,7 @@ class DOMDocumentWrapper {
 	}
 	public function load($markup, $contentType = null, $newDocumentID = null) {
 //		phpQuery::$documents[$id] = $this;
-		$this->contentType = strtolower($contentType);
+		$this->contentType = isset($contentType) ? strtolower($contentType) : null;
 		if ($markup instanceof DOMDOCUMENT) {
 			$this->document = $markup;
 			$this->root = $this->document;
@@ -286,8 +286,10 @@ class DOMDocumentWrapper {
 		}
 		// Should be careful here, still need 'magic encoding detection' since lots of pages have other 'default encoding'
 		// Worse, some pages can have mixed encodings... we'll try not to worry about that
-		$requestedCharset = strtoupper($requestedCharset);
-		$documentCharset = strtoupper($documentCharset);
+		if ($requestedCharset != null)
+			$requestedCharset = strtoupper($requestedCharset);
+		if ($documentCharset != null)
+			$documentCharset = strtoupper($documentCharset);
 		phpQuery::debug("DOC: $documentCharset REQ: $requestedCharset");
 		if ($requestedCharset && $documentCharset && $requestedCharset !== $documentCharset) {
 			phpQuery::debug("CHARSET CONVERT");
@@ -516,7 +518,7 @@ class DOMDocumentWrapper {
 			.($xhtml ? '/' : '')
 			.'>';
 		if (strpos($html, '<head') === false) {
-			if (strpos($hltml, '<html') === false) {
+			if (strpos($html, '<html') === false) {
 				return $meta.$html;
 			} else {
 				return preg_replace(
@@ -658,7 +660,7 @@ class DOMDocumentWrapper {
 		} else {
 			$markup2 = phpQuery::$defaultDoctype.'<html><head><meta http-equiv="Content-Type" content="text/html;charset='
 				.$charset.'"></head>';
-			$noBody = strpos($markup, '<body') === false;
+			$noBody = $markup == null || strpos($markup, '<body') === false;
 			if ($noBody)
 				$markup2 .= '<body>';
 			$markup2 .= $markup;
@@ -2908,6 +2910,7 @@ class phpQueryObject
 	public function length() {
 		return $this->size();
 	}
+	#[\ReturnTypeWillChange]
 	public function count() {
 		return $this->size();
 	}
@@ -4191,6 +4194,7 @@ class phpQueryObject
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function rewind(){
 		$this->debug('iterating foreach');
 //		phpQuery::selectDocument($this->getDocumentID());
@@ -4206,12 +4210,14 @@ class phpQueryObject
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function current(){
 		return $this->elementsInterator[ $this->current ];
 	}
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function key(){
 		return $this->current;
 	}
@@ -4226,6 +4232,7 @@ class phpQueryObject
 	 * @see phpQueryObject::_next()
 	 * @return phpQueryObject|QueryTemplatesSource|QueryTemplatesParse|QueryTemplatesSourceQuery
 	 */
+	#[\ReturnTypeWillChange]
 	public function next($cssSelector = null){
 //		if ($cssSelector || $this->valid)
 //			return $this->_next($cssSelector);
@@ -4243,6 +4250,7 @@ class phpQueryObject
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function valid(){
 		return $this->valid;
 	}
@@ -4251,18 +4259,21 @@ class phpQueryObject
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetExists($offset) {
 		return $this->find($offset)->size() > 0;
 	}
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetGet($offset) {
 		return $this->find($offset);
 	}
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetSet($offset, $value) {
 //		$this->find($offset)->replaceWith($value);
 		$this->find($offset)->html($value);
@@ -4270,6 +4281,7 @@ class phpQueryObject
 	/**
    * @access private
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($offset) {
 		// empty
 		throw new Exception("Can't do unset, use array interface only for calling queries and replacing HTML.");

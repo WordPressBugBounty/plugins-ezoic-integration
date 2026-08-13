@@ -55,13 +55,14 @@ class Ezoic_Integration_Form_Handler
 
 		$messages = array();
 
-		if ($_POST['action'] == 'clear_cache') {
+		$action = isset($_POST['action']) ? $_POST['action'] : '';
+		if ($action == 'clear_cache') {
 			$this->handle_clear_cache();
 			$messages[] = array(
 				'type' => 'success',
 				'message' => __('Cache successfully cleared!', 'ezoic')
 			);
-		} elseif ($_POST['action'] == 'enable_js_integration') {
+		} elseif ($action == 'enable_js_integration') {
 			$this->handle_enable_js_integration();
 		}
 
@@ -138,9 +139,9 @@ class Ezoic_Integration_Form_Handler
 
 			// Redirect based on where it was enabled from
 			if (isset($_POST['from_integration_tab']) || isset($_POST['redirect_to_integration_tab'])) {
-				wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_enabled=1'));
+				wp_safe_redirect(admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_enabled=1'));
 			} else {
-				wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&js_integration_enabled=1'));
+				wp_safe_redirect(admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&js_integration_enabled=1'));
 			}
 			exit;
 		}
@@ -168,7 +169,7 @@ class Ezoic_Integration_Form_Handler
 			update_option('ezoic_integration_status', $options);
 
 			// Redirect to Integration tab
-			wp_redirect(admin_url('admin.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
+			wp_safe_redirect(admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
 			exit;
 		}
 	}

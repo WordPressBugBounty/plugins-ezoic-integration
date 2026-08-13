@@ -266,7 +266,7 @@ class Ezoic_Cdn extends Ezoic_Feature {
 	public static function ezoic_cdn_show_post_ids( $refresh = false ) {
 		static $show_post_ids = null;
 		if ( is_null( $show_post_ids ) || $refresh ) {
-			$show_post_ids = ( get_option( 'ezoic_cdn_show_post_ids ', 'on' ) === 'on' );
+			$show_post_ids = ( get_option( 'ezoic_cdn_show_post_ids' ) === 'on' );
 		}
 
 		return $show_post_ids;

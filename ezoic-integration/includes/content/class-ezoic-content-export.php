@@ -105,7 +105,6 @@ abstract class Ezoic_Content_Export {
 
 	protected function schedule_export_cron( $tenant ) {
 		// Register cron job that calls export init action
-		// See class-ezoic-cms.php
 		$schedule_error = wp_schedule_single_event( time(), $this->get_cron_event_name(), array( $tenant ), true);
 		if ( is_wp_error( $schedule_error ) ) {
 			// Failed to initiate export
