@@ -369,6 +369,11 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		}
 		$urls = array_merge( $urls, self::ezoic_cdn_get_urls_to_always_purge() );
 
+		// Drop non-string entries (e.g. a WP_Error from get_term_link() on a
+		// deleted term) before array_diff(), which string-casts every element
+		// and fatals on anything without __toString().
+		$urls = array_filter( $urls, 'is_string' );
+
 		$urls = array_filter( array_unique( array_diff( $urls, $this->ezoic_cdn_already_purged ) ) );
 		sort( $urls );
 

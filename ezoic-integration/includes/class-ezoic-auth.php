@@ -89,7 +89,7 @@ class Ezoic_Auth {
     if ( ! is_wp_error( $response ) ) {
       $responseBody = wp_remote_retrieve_body( $response );
       $parsed       = json_decode( $responseBody );
-      if ( is_null( $parsed->data ) ) {
+      if ( ! is_object( $parsed ) || ! isset( $parsed->data ) ) {
         error_log( 'Error communicating with auth endpoint: ' . $responseBody );
       } else {
 				$this->client_id = isset($parsed->data->id) ? $parsed->data->id : '';
@@ -99,7 +99,7 @@ class Ezoic_Auth {
         update_option( "ezoic_auth_client_secret", $secret_encrypted );
       }
     } else {
-      error_log( 'Error communicating with auth endpoint: ' . print_r($response) );
+      error_log( 'Error communicating with auth endpoint: ' . print_r($response, true) );
     }
   }
 

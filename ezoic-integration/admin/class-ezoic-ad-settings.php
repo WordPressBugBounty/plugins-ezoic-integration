@@ -64,9 +64,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::CREATABLE,
 			'callback'					=> array($this, 'save_rule'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -75,9 +73,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::CREATABLE,
 			'callback'					=> array($this, 'save_settings'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -86,9 +82,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::CREATABLE,
 			'callback'					=> array($this, 'reset_settings'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -97,9 +91,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::CREATABLE,
 			'callback'					=> array($this, 'clear_default_configuration'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -108,9 +100,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::READABLE,
 			'callback'					=> array($this, 'retrieve_placeholders'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -119,9 +109,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::READABLE,
 			'callback'					=> array($this, 'domain_status'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -130,9 +118,7 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::CREATABLE,
 			'callback'					=> array($this, 'force_generate'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
 
@@ -141,27 +127,9 @@ class Ezoic_Integration_Ad_Settings
 			'methods'					=> \WP_REST_SERVER::READABLE,
 			'callback'					=> array($this, 'get_config'),
 			'args'						=> array(),
-			'permission_callback'	=> function () {
-				return $this->validate_user();
-			},
+			'permission_callback'	=> array(Ezoic_Security_Gate::class, 'rest_admin'),
 			'show_in_index'			=> false
 		));
-	}
-
-	/**
-	 * Ensures that the current request is from a user with the administrator role
-	 */
-	private function validate_user()
-	{
-		$data = \get_userdata(\get_current_user_id());
-
-		// Verify there is a user and that they have roles
-		if (!$data || !$data->roles || !is_array($data->roles)) {
-			return false;
-		}
-
-		$role = $data->roles;
-		return (\is_super_admin() || (in_array('administrator', $role)));
 	}
 
 	/**

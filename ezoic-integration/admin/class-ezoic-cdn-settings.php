@@ -159,9 +159,18 @@ class Ezoic_Integration_CDN_Settings
 			);
 		}
 
-		register_setting('ezoic_cdn', 'ezoic_cdn_api_key');
-		register_setting('ezoic_cdn', 'ezoic_cdn_enabled', array('default' => true));
-		register_setting('ezoic_cdn', 'ezoic_cdn_show_post_ids', array('default' => false));
+		register_setting('ezoic_cdn', 'ezoic_cdn_api_key', array(
+			'type' => 'string',
+			'sanitize_callback' => 'sanitize_text_field'
+		));
+		register_setting('ezoic_cdn', 'ezoic_cdn_enabled', array(
+			'default' => true,
+			'sanitize_callback' => array($this, 'ezoic_cdn_sanitize_toggle')
+		));
+		register_setting('ezoic_cdn', 'ezoic_cdn_show_post_ids', array(
+			'default' => false,
+			'sanitize_callback' => array($this, 'ezoic_cdn_sanitize_toggle')
+		));
 		register_setting('ezoic_cdn', 'ezoic_cdn_always_clear_posts', array(
 			'default'           => '',
 			'sanitize_callback' => array(
@@ -177,10 +186,22 @@ class Ezoic_Integration_CDN_Settings
 			)
 		));
 
-		register_setting('ezoic_cdn', 'ezoic_cdn_always_home', array('default' => true));
-		register_setting('ezoic_cdn', 'ezoic_cdn_domain');
-		register_setting('ezoic_cdn', 'ezoic_cdn_verbose_mode', array('default' => false));
-		register_setting('ezoic_cdn', 'fb_clear_cache_enabled', array('default' => 'off'));
+		register_setting('ezoic_cdn', 'ezoic_cdn_always_home', array(
+			'default' => true,
+			'sanitize_callback' => array($this, 'ezoic_cdn_sanitize_toggle')
+		));
+		register_setting('ezoic_cdn', 'ezoic_cdn_domain', array(
+			'type' => 'string',
+			'sanitize_callback' => 'sanitize_text_field'
+		));
+		register_setting('ezoic_cdn', 'ezoic_cdn_verbose_mode', array(
+			'default' => false,
+			'sanitize_callback' => array($this, 'ezoic_cdn_sanitize_toggle')
+		));
+		register_setting('ezoic_cdn', 'fb_clear_cache_enabled', array(
+			'default' => 'off',
+			'sanitize_callback' => array($this, 'ezoic_cdn_sanitize_toggle')
+		));
 		register_setting('ezoic_cdn', 'fb_app_id', array(
 			'default'           => null,
 			'type'              => 'string',
@@ -438,6 +459,18 @@ class Ezoic_Integration_CDN_Settings
 		return implode(',', array_map('intval', $ids_to_save));
 	}
 
+	/**
+	 * Sanitize an on/off CDN toggle. These options are read with a strict
+	 * comparison against 'on', so anything else is stored as 'off'.
+	 *
+	 * @param mixed $input Submitted value
+	 * @return string 'on' or 'off'
+	 */
+	public static function ezoic_cdn_sanitize_toggle($input)
+	{
+		return ($input === 'on') ? 'on' : 'off';
+	}
+
 	public static function ezoic_cdn_sanitize_always_clear_urls($input)
 	{
 		$current_value = get_option('ezoic_cdn_always_clear_urls', '');
@@ -588,8 +621,17 @@ class Ezoic_Integration_CDN_Settings
 
 	public static function fb_validate_app_id($input)
 	{
-		$fb            = new FacebookShareCache();
 		$current_value = get_option('fb_app_id');
+
+		// $input is null when this field wasn't submitted (e.g. saving the
+		// tab for an unrelated field, or while the field isn't rendered
+		// because "Clear Facebook Share Cache" is off) - keep the stored
+		// value instead of wiping it.
+		if ($input === null) {
+			return $current_value;
+		}
+
+		$fb = new FacebookShareCache();
 
 		if (! $fb->validate_app_id($input) && Ezoic_Cdn::fb_clear_cache_enabled()) {
 			add_settings_error('fb_app_id', 'fb_app_id_error', '"Facebook App ID" must be set and a valid Facebook app ID');
@@ -602,12 +644,16 @@ class Ezoic_Integration_CDN_Settings
 
 	public static function fb_validate_app_secret($input)
 	{
-
-		$fb            = new FacebookShareCache();
 		$current_value = get_option('fb_app_secret');
 
+		if ($input === null) {
+			return $current_value;
+		}
+
+		$fb = new FacebookShareCache();
+
 		if (! $fb->validate_app_secret($input) && Ezoic_Cdn::fb_clear_cache_enabled()) {
-			add_settings_error('fb_app_secret', 'fb_app_secret_error', '"Facebook App Secret" must be set and a valid Facebook app secret:' . $input);
+			add_settings_error('fb_app_secret', 'fb_app_secret_error', '"Facebook App Secret" must be set and a valid Facebook app secret.');
 
 			return $current_value;
 		}
@@ -634,6 +680,11 @@ class Ezoic_Integration_CDN_Settings
 				return $current_value;
 			}
 		}
+
+		// No return above (implicit null) used to silently wipe a
+		// previously-stored auth token whenever the id/secret aren't both
+		// set - keep the stored value instead.
+		return $current_value;
 	}
 }
 

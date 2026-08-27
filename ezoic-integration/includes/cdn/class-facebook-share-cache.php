@@ -354,7 +354,7 @@ class FacebookShareCache extends Ezoic_Feature
 			$res = curl_exec($ch);
 			$res = json_decode($res);
 
-			if (strlen($res->access_token)) {
+			if (is_object($res) && !empty($res->access_token)) {
 				return $res->access_token;
 			} else {
 				return '';

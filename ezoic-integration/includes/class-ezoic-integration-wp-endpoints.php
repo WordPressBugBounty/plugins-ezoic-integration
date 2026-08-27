@@ -176,11 +176,17 @@ namespace Ezoic_Namespace {
 
 			$this->endpoints = array();
 
-			$ez_data = json_decode( $result["body"] );
-			if ( $ez_data->result === "true" ) {
-				foreach ( $ez_data->endpoints as $endpoint ) {
-					$this->endpoints[] = $endpoint;
-				}
+			if ( ! is_array( $result ) || ! isset( $result['body'] ) ) {
+				return;
+			}
+
+			$ez_data = json_decode( $result['body'] );
+			if ( ! is_object( $ez_data ) || empty( $ez_data->endpoints ) || $ez_data->result !== 'true' ) {
+				return;
+			}
+
+			foreach ( $ez_data->endpoints as $endpoint ) {
+				$this->endpoints[] = $endpoint;
 			}
 		}
 

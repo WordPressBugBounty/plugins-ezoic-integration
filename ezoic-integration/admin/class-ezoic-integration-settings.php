@@ -273,8 +273,50 @@ class Ezoic_Integration_Admin_Settings
 
 		register_setting(
 			'ezoic_integration_status',
-			'ezoic_integration_status'
+			'ezoic_integration_status',
+			array('type' => 'array', 'sanitize_callback' => array($this, 'sanitize_integration_status'))
 		);
+	}
+
+	/**
+	 * Sanitize the integration status option. Keep the known keys, overlay
+	 * whatever the caller actually passed, and leave absent keys at their
+	 * stored values. WordPress runs this on every update_option, including
+	 * partial programmatic writes.
+	 *
+	 * @param mixed $status Submitted status
+	 * @return array Sanitized status
+	 */
+	public function sanitize_integration_status($status)
+	{
+		$current = \get_option('ezoic_integration_status');
+		$current = is_array($current) ? $current : $this->default_display_options();
+		$known = array(
+			'is_integrated'    => true,
+			'integration_type' => true,
+			'check_time'       => true,
+		);
+		$sanitized = array_intersect_key($current, $known);
+
+		if (!is_array($status)) {
+			return $sanitized;
+		}
+
+		if (array_key_exists('is_integrated', $status)) {
+			$sanitized['is_integrated'] = (bool) $status['is_integrated'];
+		}
+
+		if (array_key_exists('integration_type', $status)) {
+			$sanitized['integration_type'] = is_scalar($status['integration_type'])
+				? sanitize_text_field((string) $status['integration_type'])
+				: '';
+		}
+
+		if (array_key_exists('check_time', $status)) {
+			$sanitized['check_time'] = is_numeric($status['check_time']) ? (int) $status['check_time'] : '';
+		}
+
+		return $sanitized;
 	}
 
 	/**

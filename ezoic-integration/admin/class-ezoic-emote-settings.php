@@ -35,7 +35,23 @@ class Ezoic_Emote_Settings
 			'ezoic_emote_settings_section'
 		);
 
-		register_setting('ezoic_emote_settings', 'ez_emote_enabled');
+		register_setting('ezoic_emote_settings', 'ez_emote_enabled', array(
+			'type' => 'string',
+			'default' => 'false',
+			'sanitize_callback' => array($this, 'sanitize_emote_enabled')
+		));
+	}
+
+	/**
+	 * Sanitize the emote toggle. The option is read as a 'true'/'false' string,
+	 * so anything else is stored disabled rather than coerced to enabled.
+	 *
+	 * @param mixed $value Submitted value
+	 * @return string 'true' or 'false'
+	 */
+	public function sanitize_emote_enabled($value)
+	{
+		return ($value === 'true') ? 'true' : 'false';
 	}
 
 	// Output page header with overview of settings

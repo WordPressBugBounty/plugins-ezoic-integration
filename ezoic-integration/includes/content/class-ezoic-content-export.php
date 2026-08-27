@@ -17,10 +17,7 @@ abstract class Ezoic_Content_Export {
 	abstract public function get_module_name();
 
 	public function check_headers( $request ) {
-		return self::verify_content_signature(
-			$request->get_header( 'x-ezoic-content-auth' ),
-			(int) $request->get_header( 'x-ezoic-content-ts' )
-		);
+		return Ezoic_Security_Gate::content_hmac( $request );
 	}
 
 	/**
@@ -34,7 +31,7 @@ abstract class Ezoic_Content_Export {
 	 *     message = site_url() . ':' . ts
 	 *
 	 * site_url() is WordPress's exact stored value ('siteurl' option): scheme + host
-	 * (+ optional path), no trailing slash — e.g. "https://example.com". Callers must
+	 * (+ optional path), no trailing slash, e.g. "https://example.com". Callers must
 	 * sign the identical string; any scheme/host/trailing-slash difference fails
 	 * verification and returns 401 to the caller.
 	 *

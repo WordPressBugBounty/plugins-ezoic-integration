@@ -112,7 +112,53 @@ class Ezoic_Speed_Settings
 		);
 
 		// Register setting (this is an array of the various settings, see default_speed_settings())
-		register_setting('ezoic_speed_settings', 'ezoic_speed_settings');
+		register_setting('ezoic_speed_settings', 'ezoic_speed_settings', array(
+			'type' => 'array',
+			'sanitize_callback' => array($this, 'sanitize_speed_settings')
+		));
+	}
+
+	/**
+	 * Sanitize the speed settings array: drop unknown keys and store every known
+	 * toggle as '1' or '0'.
+	 *
+	 * @param mixed $settings Submitted settings
+	 * @return array Sanitized settings
+	 */
+	public function sanitize_speed_settings($settings)
+	{
+		if (!is_array($settings)) {
+			return array();
+		}
+
+		$sanitized = array();
+		foreach ($this->speed_settings_keys() as $key) {
+			if (!isset($settings[$key])) {
+				continue;
+			}
+
+			$sanitized[$key] = ($settings[$key] == '1') ? '1' : '0';
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Every toggle the speed settings form renders. Three of them have no entry in
+	 * default_speed_settings(), so the defaults alone are not the allowed-key list.
+	 *
+	 * @return array
+	 */
+	private function speed_settings_keys()
+	{
+		return array_merge(
+			array(
+				'ezoic_disable_emojis',
+				'ezoic_schemeless_urls',
+				'ezoic_remove_jquery_migrate',
+			),
+			array_keys($this->default_speed_settings())
+		);
 	}
 
 	// Output page header with overview of settings

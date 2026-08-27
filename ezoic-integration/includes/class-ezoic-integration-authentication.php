@@ -64,7 +64,7 @@ class Ezoic_Integration_Authentication {
 			$responseBody = wp_remote_retrieve_body( $response );
 			$parsed       = json_decode( $responseBody );
 
-			if ( !is_null( $parsed->data ) ) {
+			if ( is_object( $parsed ) && isset( $parsed->data ) ) {
 				return $parsed->data;
 			}
 		}
@@ -158,7 +158,7 @@ class Ezoic_Integration_Authentication {
 			$responseBody = wp_remote_retrieve_body( $response );
 			$parsed       = json_decode( $responseBody );
 
-			if ( !is_null( $parsed->data ) ) {
+			if ( is_object( $parsed ) && isset( $parsed->data ) ) {
 				return $parsed->data;
 			}
 		}

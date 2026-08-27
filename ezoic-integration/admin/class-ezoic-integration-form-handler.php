@@ -57,6 +57,13 @@ class Ezoic_Integration_Form_Handler
 
 		$action = isset($_POST['action']) ? $_POST['action'] : '';
 		if ($action == 'clear_cache') {
+			// handle_clear_cache() is also hooked to post_updated/save_post and friends,
+			// so the nonce belongs on this POST branch rather than inside that method.
+			$nonce = isset($_POST['ezoic_clear_cache_nonce']) ? $_POST['ezoic_clear_cache_nonce'] : '';
+			if (!Ezoic_Security_Gate::admin_post($nonce, 'ezoic_clear_cache')) {
+				wp_die('Security check failed');
+			}
+
 			$this->handle_clear_cache();
 			$messages[] = array(
 				'type' => 'success',
@@ -75,7 +82,8 @@ class Ezoic_Integration_Form_Handler
 	public function handle_enable_js_integration()
 	{
 		if (isset($_POST['action']) && $_POST['action'] === 'enable_js_integration') {
-			if (!wp_verify_nonce($_POST['js_integration_nonce'], 'enable_js_integration_nonce')) {
+			$nonce = isset($_POST['js_integration_nonce']) ? $_POST['js_integration_nonce'] : '';
+			if (!Ezoic_Security_Gate::admin_post($nonce, 'enable_js_integration_nonce')) {
 				wp_die('Security check failed');
 			}
 
@@ -153,7 +161,8 @@ class Ezoic_Integration_Form_Handler
 	public function handle_disable_js_integration()
 	{
 		if (isset($_POST['action']) && $_POST['action'] === 'disable_js_integration') {
-			if (!wp_verify_nonce($_POST['js_integration_disable_nonce'], 'disable_js_integration_nonce')) {
+			$nonce = isset($_POST['js_integration_disable_nonce']) ? $_POST['js_integration_disable_nonce'] : '';
+			if (!Ezoic_Security_Gate::admin_post($nonce, 'disable_js_integration_nonce')) {
 				wp_die('Security check failed');
 			}
 

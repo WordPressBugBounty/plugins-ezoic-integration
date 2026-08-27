@@ -285,7 +285,8 @@ class Ezoic_JS_Integration_Settings
 	public function handle_disable_js_integration()
 	{
 		if (isset($_POST['action']) && $_POST['action'] === 'disable_js_integration') {
-			if (!wp_verify_nonce($_POST['js_integration_disable_nonce'], 'disable_js_integration_nonce')) {
+			$nonce = isset($_POST['js_integration_disable_nonce']) ? $_POST['js_integration_disable_nonce'] : '';
+			if (!Ezoic_Security_Gate::admin_post($nonce, 'disable_js_integration_nonce')) {
 				wp_die('Security check failed');
 			}
 
