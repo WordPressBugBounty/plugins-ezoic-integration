@@ -62,7 +62,7 @@ class Ezoic_Wp_Integration extends Ezoic_Feature
 		}
 
 		// Safety check - ensure WordPress functions are available
-		if (!function_exists('get_option')) {
+		if (!function_exists('get_option') || !function_exists('wp_cache_get')) {
 			return false;
 		}
 

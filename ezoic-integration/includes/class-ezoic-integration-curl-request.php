@@ -10,7 +10,7 @@ class Ezoic_Integration_CURL_Request implements iEzoic_Integration_Request {
 	public function __construct() {
 		// Only initialize request data if WordPress functions are available
 		// Otherwise defer until first use
-		if (function_exists('get_option')) {
+		if (function_exists('get_option') && function_exists('wp_cache_get')) {
 			$this->request_data = Ezoic_Integration_Request_Utils::get_request_base_data();
 		}
 	}
@@ -95,9 +95,9 @@ class Ezoic_Integration_CURL_Request implements iEzoic_Integration_Request {
 			CURLOPT_USERAGENT => ! empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
 		);
 
-		if ( function_exists( 'get_option' ) ) {
+		if ( function_exists( 'get_option' ) && function_exists( 'wp_cache_get' ) ) {
 			$ezoic_options = \get_option( 'ezoic_integration_options' );
-			if ( $ezoic_options['verify_ssl'] == false ) {
+			if ( is_array( $ezoic_options ) && isset( $ezoic_options['verify_ssl'] ) && $ezoic_options['verify_ssl'] == false ) {
 				$settings[ CURLOPT_SSL_VERIFYPEER ] = false;
 				$settings[ CURLOPT_SSL_VERIFYHOST ] = false;
 			}

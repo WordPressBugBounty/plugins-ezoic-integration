@@ -19,20 +19,6 @@ if (!function_exists('getallheaders')) {
 	}
 }
 
-if (!function_exists('untrailingslashit')) {
-	function untrailingslashit($string)
-	{
-		return rtrim((string) $string, '/\\');
-	}
-}
-
-if (!function_exists('trailingslashit')) {
-	function trailingslashit($string)
-	{
-		return untrailingslashit($string) . '/';
-	}
-}
-
 if (!function_exists('is_ssl')) {
 	function is_ssl()
 	{

@@ -31,8 +31,7 @@ class Ezoic_Integration_Path_Sanitizer
 			return false;
 		}
 
-		// Ensure trailing slash for directory paths
-		return trailingslashit($real_path);
+		return rtrim( (string) $real_path, '/\\' ) . '/';
 	}
 
 	/**

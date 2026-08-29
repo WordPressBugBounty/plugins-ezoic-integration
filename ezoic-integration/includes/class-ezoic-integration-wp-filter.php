@@ -31,7 +31,13 @@ class Ezoic_Integration_WP_Filter implements iEzoic_Integration_Filter {
 			return true;
 		}
 
-		$ezoic_options = \get_option( 'ezoic_integration_options' );
+		$ezoic_options = array();
+		if ( function_exists( 'get_option' ) && function_exists( 'wp_cache_get' ) ) {
+			$fetched = \get_option( 'ezoic_integration_options' );
+			if ( is_array( $fetched ) ) {
+				$ezoic_options = $fetched;
+			}
+		}
 
 		$request_method = 'NONE';
 		if ( isset( $_SERVER['REQUEST_METHOD'] ) ) {
