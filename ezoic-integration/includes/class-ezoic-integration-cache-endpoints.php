@@ -2,7 +2,7 @@
 
 namespace {
 
-include_once 'include-functions.php';
+include_once __DIR__ . '/include-functions.php';
 }
 
 namespace Ezoic_Namespace {

@@ -183,6 +183,11 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 			return $content;
 		}
 
+		// Used to tell "different post, same page" (skip - avoid a duplicate id)
+		// apart from "same post, the_content called again with fresh content"
+		// (fall through and re-insert) in the guard below.
+		$current_post_id = \function_exists('get_the_ID') ? \get_the_ID() : false;
+
 		// Insert placeholders
 		foreach ($rules as $rule) {
 			if (!isset($this->config->placeholders[$rule->placeholder_id])) {
@@ -196,6 +201,23 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 			$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
 			if ($rule->display != 'disabled') {
+				// Skip if this placement was already inserted on this page for a
+				// DIFFERENT post. If it was inserted for the SAME post, this is the
+				// pre-loop re-insertion path above re-processing fresh content (a
+				// theme calling the_content twice on the same post) - fall through.
+				if (
+					Ezoic_AdTester::is_placement_inserted($placeholder->position_id)
+					&& Ezoic_AdTester::get_placement_inserted_post_id($placeholder->position_id) !== $current_post_id
+				) {
+					Ezoic_Integration_Logger::console_debug(
+						"Placement skipped - already inserted on this page.",
+						'Content Ads',
+						'info',
+						$placeholder->position_id
+					);
+					continue;
+				}
+
 				// Skip if this placeholder already exists in content
 				if (strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false) {
 					Ezoic_Integration_Logger::console_debug(
@@ -209,11 +231,11 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 
 				switch ($rule->display) {
 					case 'before_paragraph':
-						$content = $this->relative_to_paragraph($placeholder, $rule->display_option, $content, 'before');
+						$content = $this->relative_to_paragraph($placeholder, $rule->display_option, $content, 'before', $current_post_id);
 						break;
 
 					case 'after_paragraph':
-						$content = $this->relative_to_paragraph($placeholder, $rule->display_option, $content, 'after');
+						$content = $this->relative_to_paragraph($placeholder, $rule->display_option, $content, 'after', $current_post_id);
 						break;
 
 					default:
@@ -235,7 +257,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 	/**
 	 * Inserts a placeholder either before or after a paragraph
 	 */
-	private function relative_to_paragraph($placeholder, $paragraph_number, $content, $mode = 'before')
+	private function relative_to_paragraph($placeholder, $paragraph_number, $content, $mode = 'before', $post_id = null)
 	{
 		// Check if this is a genuine new insertion (not already in content AND not already marked as inserted)
 		$already_in_content = \strpos($content, "ezoic-pub-ad-placeholder-{$placeholder->position_id}") !== false;
@@ -297,7 +319,7 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		$new_content_length = strlen($content);
 		if ($new_content_length > $original_content_length) {
 			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
-			Ezoic_AdTester::mark_placement_inserted($placeholder->position_id);
+			Ezoic_AdTester::mark_placement_inserted($placeholder->position_id, $post_id);
 			// Only log if this is a truly new insertion (not already in content AND not previously marked as inserted)
 			if (!$already_in_content && !$was_previously_inserted) {
 				Ezoic_Integration_Logger::console_debug(

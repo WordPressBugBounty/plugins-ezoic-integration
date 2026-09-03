@@ -122,9 +122,6 @@ class Ezoic_Integration_Public
 			return;
 		}
 
-		// Always inject analytics script when JS integration is enabled
-		$this->loader->add_action('wp_head', $this, 'inject_ezoic_analytics_script', 1);
-
 		$js_options = get_option('ezoic_js_integration_options');
 		$is_preview_mode = $this->is_js_preview_mode();
 
@@ -137,12 +134,16 @@ class Ezoic_Integration_Public
 			);
 		}
 
-		// Add head scripts if auto-insert is enabled or in preview mode
+		// sa.min.js first in <head> so its download starts before blocking theme/plugin CSS/JS.
 		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
-			$this->loader->add_action('wp_head', $this, 'inject_ezoic_js_scripts', 10);
+			$this->loader->add_action('wp_head', $this, 'inject_ezoic_js_scripts', 0);
 		}
 
-		// Add privacy scripts if enabled or in preview mode (must load before main scripts)
+		// Analytics is async; keep it after sa.min.js in document order (priority 1 > 0).
+		// Always emit when JS integration is enabled — independent of auto-insert.
+		$this->loader->add_action('wp_head', $this, 'inject_ezoic_analytics_script', 1);
+
+		// Privacy scripts are async so they do not block discovery of sa.min.js.
 		if ((isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_head', $this, 'inject_privacy_scripts', 5);
 		}
@@ -215,7 +216,7 @@ class Ezoic_Integration_Public
 		$litespeed_attr = $this->get_cache_plugin_script_attrs();
 
 		// Main Ezoic script
-		echo '<script id="ezoic-wp-plugin-js" async src="' . EZOIC_SA_SCRIPT_URL . '"' . $litespeed_attr . '></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-js" async src="' . esc_url(EZOIC_SA_SCRIPT_URL) . '"' . $litespeed_attr . '></script>' . "\n";
 
 		// Initialize ezstandalone
 		echo '<script data-ezoic="1"' . $litespeed_attr . '>window.ezstandalone = window.ezstandalone || {};';
@@ -238,7 +239,7 @@ class Ezoic_Integration_Public
 
 		$litespeed_attr = $this->get_cache_plugin_script_attrs();
 
-		echo '<script src="' . EZOIC_ANALYTICS_SCRIPT_URL . '"' . $litespeed_attr . '></script>' . "\n";
+		echo '<script async src="' . esc_url(EZOIC_ANALYTICS_SCRIPT_URL) . '"' . $litespeed_attr . '></script>' . "\n";
 	}
 
 	/**
@@ -257,9 +258,9 @@ class Ezoic_Integration_Public
 
 		// CCPA/GPP can be suppressed independently of the CMP/GDPR gatekeeper script.
 		if (Ezoic_Integration_Privacy_Config::should_inject_ccpa_script()) {
-			echo '<script id="ezoic-wp-plugin-cmp" src="' . EZOIC_CMP_SCRIPT_URL . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
+			echo '<script id="ezoic-wp-plugin-cmp" async src="' . esc_url(EZOIC_CMP_SCRIPT_URL) . '" data-cfasync="false"' . $litespeed_attr . '></script>' . "\n";
 		}
-		echo '<script id="ezoic-wp-plugin-gatekeeper" src="' . EZOIC_GATEKEEPER_SCRIPT_URL . '" data-cfasync="false"' . $gpp_suppress_attr . $litespeed_attr . '></script>' . "\n";
+		echo '<script id="ezoic-wp-plugin-gatekeeper" async src="' . esc_url(EZOIC_GATEKEEPER_SCRIPT_URL) . '" data-cfasync="false"' . $gpp_suppress_attr . $litespeed_attr . '></script>' . "\n";
 	}
 
 	/**
@@ -452,12 +453,13 @@ class Ezoic_Integration_Public
 		// Add Ezoic script URLs to exclusion list
 		$ezoic_scripts = array(
 			'ezojs.com/ezoic/sa.min.js',
+			'ezoicanalytics.com/analytics.js',
 			'cmp.gatekeeperconsent.com/min.js',
 			'the.gatekeeperconsent.com/cmp.min.js'
 		);
 
 		foreach ($ezoic_scripts as $script) {
-			if (!in_array($script, $excludes)) {
+			if (!in_array($script, $excludes, true)) {
 				$excludes[] = $script;
 			}
 		}

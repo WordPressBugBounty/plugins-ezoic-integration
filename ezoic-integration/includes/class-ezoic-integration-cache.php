@@ -70,6 +70,15 @@ class Ezoic_Integration_Cache implements iEzoic_Integration_Cache {
 		return false;
 	}
 
+	// NOTE: advanced-cache.php calls these names; they are not case-folds of is_cached / get_page.
+	public function IsCached( $active_template ) {
+		return $this->is_cached( $active_template );
+	}
+
+	public function GetPage( $active_template ) {
+		return $this->get_page( $active_template );
+	}
+
 	/**
 	 * Based on the request path, it searches the directory and returns
 	 * and array of the available active templates based on the prefixes
@@ -120,6 +129,10 @@ class Ezoic_Integration_Cache implements iEzoic_Integration_Cache {
 	 * Checks to see if the request is allowed to be cached or not.
 	 */
 	public function is_cacheable() {
+		if ( ! function_exists( 'is_user_logged_in' ) ) {
+			return false;
+		}
+
 		return empty($_SERVER['QUERY_STRING']) // Do not cache pages with a query string.
 		&& !preg_match('/(.*favicon.*)/', $this->request_path) // Do not cache the favicon.ico request.
 		&& !is_user_logged_in(); // Do not cache pages for logged in users.

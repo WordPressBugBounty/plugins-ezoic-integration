@@ -1,7 +1,14 @@
 <?php
 
 /**
- * Global function includes
+ * Global helpers loaded from advanced-cache.php before WordPress loads
+ * formatting.php and option.php.
+ *
+ * Do not define WordPress core function names here, even behind
+ * function_exists. Core defines many of those names later with no
+ * guard, so a plugin polyfill wins the race and fatals when WP
+ * continues. is_ssl() is the exception: load.php defines it before
+ * this drop-in runs.
  */
 
 // Needed for nginx servers

@@ -1470,14 +1470,26 @@ class Ezoic_AdTester extends Ezoic_Feature {
 	 * Check if a placement has already been inserted on this page
 	 */
 	public static function is_placement_inserted( $position_id ) {
-		return isset( self::$inserted_placements_on_page[ $position_id ] );
+		return array_key_exists( $position_id, self::$inserted_placements_on_page );
 	}
 
 	/**
-	 * Mark a placement as inserted on this page
+	 * Mark a placement as inserted on this page. $post_id lets a caller that
+	 * re-processes the same post's content (e.g. a theme calling the_content
+	 * twice) tell that apart from a different post reusing the placement.
 	 */
-	public static function mark_placement_inserted( $position_id ) {
-		self::$inserted_placements_on_page[ $position_id ] = true;
+	public static function mark_placement_inserted( $position_id, $post_id = null ) {
+		self::$inserted_placements_on_page[ $position_id ] = $post_id;
+	}
+
+	/**
+	 * The post ID a placement was marked inserted for, or null if it was
+	 * marked without one (or isn't marked at all).
+	 */
+	public static function get_placement_inserted_post_id( $position_id ) {
+		return array_key_exists( $position_id, self::$inserted_placements_on_page )
+			? self::$inserted_placements_on_page[ $position_id ]
+			: null;
 	}
 
 	/**
