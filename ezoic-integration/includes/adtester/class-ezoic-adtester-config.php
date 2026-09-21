@@ -107,8 +107,28 @@ class Ezoic_AdTester_Config
 		// Decode configuration
 		$decoded = \base64_decode($encoded);
 
-		// Deserialize configuration
-		$config = \unserialize($decoded);
+		// Deserialize configuration. Restrict to the classes this plugin
+		// persists in the option to prevent PHP object injection from a
+		// tampered value. The list must cover every nested object type or
+		// those nodes come back as __PHP_Incomplete_Class and the publisher
+		// silently loses placements / meta tags.
+		$config = \unserialize($decoded, array('allowed_classes' => self::persisted_classes()));
+
+		// unserialize() returns false on malformed input (e.g. an option
+		// mangled by a non-serialization-aware search-replace) and a
+		// __PHP_Incomplete_Class for a disallowed top-level class; either way
+		// fall back to a fresh config and overwrite the stored value so the
+		// recovery path is not re-hit on every load.
+		if (!($config instanceof Ezoic_AdTester_Config)) {
+			Ezoic_Integration_Logger::log_error('Corrupted ez_adtester_config option detected; resetting to defaults', 'AdTester');
+			$fresh = new Ezoic_AdTester_Config();
+			try {
+				Ezoic_AdTester_Config::store($fresh);
+			} catch (\Throwable $e) {
+				Ezoic_Integration_Logger::log_error('Failed to persist config reset: ' . $e->getMessage(), 'AdTester');
+			}
+			return $fresh;
+		}
 
 		// Upgrade if needed
 		Ezoic_AdTester_Config::upgrade($config);
@@ -131,6 +151,21 @@ class Ezoic_AdTester_Config
 		}
 
 		return $config;
+	}
+
+	/**
+	 * Every class that can appear inside the serialized ez_adtester_config
+	 * option: the config itself, its placeholder / placeholder_config
+	 * entries, and the stdClass meta_tags rows saved from the admin payload.
+	 */
+	public static function persisted_classes()
+	{
+		return array(
+			Ezoic_AdTester_Config::class,
+			Ezoic_AdTester_Placeholder::class,
+			Ezoic_AdTester_Placeholder_Config::class,
+			\stdClass::class,
+		);
 	}
 
 	/**
@@ -342,7 +377,7 @@ class Ezoic_AdTester_Config
 
 	/**
 	 * Converts legacy display-name role values (e.g. "Editor") to WordPress
-	 * role slugs (e.g. "editor"). Idempotent — safe to call on every load.
+	 * role slugs (e.g. "editor"). Idempotent - safe to call on every load.
 	 */
 	public static function normalize_role_slugs($roles)
 	{

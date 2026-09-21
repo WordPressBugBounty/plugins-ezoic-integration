@@ -515,9 +515,12 @@ class Ezoic_Integration_Renderer {
 
 		// enable WP integration
 		if ( isset( $_GET['wp_integration'] ) && $_GET['wp_integration'] ) {
-			$integration_options                           = \get_option( 'ezoic_integration_options' );
-			$integration_options['disable_wp_integration'] = 0;
-			\update_option( 'ezoic_integration_options', $integration_options );
+			$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+			if ( Ezoic_Security_Gate::admin_post( $nonce, 'ezoic_enable_wp_integration' ) ) {
+				$integration_options                           = \get_option( 'ezoic_integration_options' );
+				$integration_options['disable_wp_integration'] = 0;
+				\update_option( 'ezoic_integration_options', $integration_options );
+			}
 		}
 
 		$time_check = time() - 21600; // 6 hours

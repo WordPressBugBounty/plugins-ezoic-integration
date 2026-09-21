@@ -646,22 +646,20 @@ class Ezoic_Cdn extends Ezoic_Feature {
 			$urls[] = get_home_url( null, '/' );
 		}
 
-		if ( 'post' !== $post->post_type ) {
-			return $urls;
+		if ( 'post' === $post->post_type ) {
+			$urls[] = get_bloginfo( 'atom_url' );
+			$urls[] = get_bloginfo( 'rss_url' );
+			$urls[] = get_bloginfo( 'rss2_url' );
+			$urls[] = get_bloginfo( 'rdf_url' );
+
+			$date   = strtotime( $post->post_date );
+			$urls[] = get_year_link( gmdate( 'Y', $date ) );
+			$urls[] = get_month_link( gmdate( 'Y', $date ), gmdate( 'm', $date ) );
+			$urls[] = get_day_link( gmdate( 'Y', $date ), gmdate( 'm', $date ), gmdate( 'j', $date ) );
 		}
 
-		$urls[] = get_bloginfo( 'atom_url' );
-		$urls[] = get_bloginfo( 'rss_url' );
-		$urls[] = get_bloginfo( 'rss2_url' );
-		$urls[] = get_bloginfo( 'rdf_url' );
-
-		$date   = strtotime( $post->post_date );
-		$urls[] = get_year_link( gmdate( 'Y', $date ) );
-		$urls[] = get_month_link( gmdate( 'Y', $date ), gmdate( 'm', $date ) );
-		$urls[] = get_day_link( gmdate( 'Y', $date ), gmdate( 'm', $date ), gmdate( 'j', $date ) );
-
 		// GTranslate
-		$modified_urls = self::modify_urls_for_gtranslate( $urls );
+		$modified_urls = $this->modify_urls_for_gtranslate( $urls );
 		if ( is_array( $modified_urls ) && ! empty( $modified_urls ) ) {
 			$urls = array_merge( $urls, $modified_urls );
 		}

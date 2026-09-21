@@ -39,7 +39,7 @@ class Ezoic_Integration_Authentication {
 			$requestURL = self::AUTH_ENDPOINT;
 		}
 
-		// Expire token request after 5 seconds
+		// Expire token request after 50 seconds
 		$expires = time() + 50;
 
 		// Create token
@@ -78,7 +78,7 @@ class Ezoic_Integration_Authentication {
 	public function verify( $request_data ) {
 		// Decode authentication payload
 		$token = $request_data->get_header( 'X-AUTH-TOKEN' );
-		if ( !isset( $token ) ) {
+		if ( empty( $token ) ) {
 			$response = new \WP_Error( 'invalid_token', 'Token not present', array( "status" => 400 ) );
 
 			return $response;
@@ -87,20 +87,25 @@ class Ezoic_Integration_Authentication {
 		$domain  = Ezoic_Integration_Request_Utils::get_domain();
 
 		// Extract expiration
-		$splitToken = explode( ':', $token );
-		$expires    = (int) $splitToken[1];
+		$splitToken = explode( ':', $token, 2 );
+		if ( count( $splitToken ) !== 2 ) {
+			$response = new \WP_Error( 'invalid_token', 'Token not valid', array( "status" => 400 ) );
 
-		// Ensure the token has not timed out
-		if ( time() > $expires ) {
-			$response = new \WP_Error( 'invalid_token', 'Token has expired', array( "status" => 400 ) );
+			return $response;
+		}
+		$expires = (int) $splitToken[1];
+
+		// Verify the signature before trusting the attacker-supplied expiry for any decision
+		$calculatedToken = $this->generate_token( $expires );
+		if ( ! hash_equals( $calculatedToken, (string) $token ) ) {
+			$response = new \WP_Error( 'invalid_token', 'Token not valid', array( "status" => 400 ) );
 
 			return $response;
 		}
 
-		// Ensure token is valid
-		$calculatedToken = $this->generate_token( $expires );
-		if ( $calculatedToken != $token ) {
-			$response = new \WP_Error( 'invalid_token', 'Token not valid', array( "status" => 400 ) );
+		// Ensure the token has not timed out
+		if ( time() > $expires ) {
+			$response = new \WP_Error( 'invalid_token', 'Token has expired', array( "status" => 400 ) );
 
 			return $response;
 		}
@@ -134,7 +139,7 @@ class Ezoic_Integration_Authentication {
 			$requestURL = self::VERIFY_ENDPOINT;
 		}
 
-		// Expire token request after 5 seconds
+		// Expire token request after 50 seconds
 		$expires = time() + 50;
 
 		// Create token

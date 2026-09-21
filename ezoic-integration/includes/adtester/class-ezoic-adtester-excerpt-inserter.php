@@ -73,6 +73,10 @@ class Ezoic_AdTester_Excerpt_Inserter extends Ezoic_AdTester_Inserter
 				$tag = '<' . $excerpt_tag;
 				$position = ez_stripos($content, $tag);
 
+				if ($position === false) {
+					continue;
+				}
+
 				$content = ez_substr_replace($content, $placeholder_markup, $position, 0);
 				Ezoic_Integration_Logger::track_insertion($placeholder->position_id);
 				Ezoic_Integration_Logger::console_debug(
@@ -88,6 +92,10 @@ class Ezoic_AdTester_Excerpt_Inserter extends Ezoic_AdTester_Inserter
 			// Place after element
 			$tag = '</' . $excerpt_tag . '>';
 			$position = ez_stripos($content, $tag);
+
+			if ($position === false) {
+				continue;
+			}
 
 			$content = ez_substr_replace($content, $placeholder_markup, $position + ez_strlen($tag), 0);
 			Ezoic_Integration_Logger::track_insertion($placeholder->position_id);

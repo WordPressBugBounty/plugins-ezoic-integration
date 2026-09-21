@@ -101,6 +101,10 @@ if (class_exists('WP_Widget')) {
 						continue;
 					}
 
+					if (!Ezoic_AdTester_Inserter::should_include_placeholder($config, $placeholder)) {
+						continue;
+					}
+
 					$rules[(int) $ph_config->display_option] = $placeholder;
 				}
 			}

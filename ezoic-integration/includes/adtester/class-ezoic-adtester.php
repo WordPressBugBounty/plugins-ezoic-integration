@@ -68,7 +68,7 @@ class Ezoic_AdTester extends Ezoic_Feature {
 
 		$loader->add_filter( 'the_content', $this, 'set_content_placeholder', PHP_INT_MAX );
 		$loader->add_filter( 'the_excerpt', $this, 'set_excerpt_placeholder' );
-		$loader->add_action( 'init', $this, 'set_sidebar_placeholder', 20 ); // Run after widgets_init (priority 1)
+		$loader->add_action( 'wp', $this, 'set_sidebar_placeholder', 20 );
 		$loader->add_action( 'wp_body_open', $this, 'set_before_content_placeholder' );
 		$loader->add_action( 'wp_footer', $this, 'set_after_content_placeholder' );
 
@@ -1043,15 +1043,28 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			// Register script/css to handle element selection
 			wp_enqueue_script( 'ezoic_integration', EZOIC__PLUGIN_URL . 'admin/js/ad-select-elements.js', array(), EZOIC_INTEGRATION_VERSION );
 			wp_enqueue_style( 'ezoic_integration', EZOIC__PLUGIN_URL . 'admin/css/ad-select-elements.css' );
-		} elseif ( isset( $this->config->exclude_urls ) && count( $this->config->exclude_urls ) > 0 && function_exists( 'preg_match' ) ) {
-				$current_url = $_SERVER['REQUEST_URI'];
-			foreach ( $this->config->exclude_urls as $excl ) {
-				if ( $this->is_url_match( $current_url, $excl ) ) {
-					$this->do_insert = false;
-					break;
-				}
+		} elseif ( $this->is_current_url_excluded() ) {
+			$this->do_insert = false;
+		}
+	}
+
+	private function is_current_url_excluded() {
+		if ( empty( $this->config->exclude_urls ) || ! is_array( $this->config->exclude_urls ) || ! function_exists( 'preg_match' ) ) {
+			return false;
+		}
+
+		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+			return false;
+		}
+
+		$current_url = $_SERVER['REQUEST_URI'];
+		foreach ( $this->config->exclude_urls as $excl ) {
+			if ( $this->is_url_match( $current_url, $excl ) ) {
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 	private function is_url_match( $url, $test ) {
@@ -1061,7 +1074,7 @@ class Ezoic_AdTester extends Ezoic_Feature {
 		}
 
 		// Regex
-		$excl_escaped = '#' . \str_replace( '?', '\\?', $test ) . '$#';
+		$excl_escaped = '#' . \preg_quote( $test, '#' ) . '$#';
 
 		return \preg_match( $excl_escaped, $url );
 	}
@@ -1230,7 +1243,7 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			$user  = wp_get_current_user();
 			$roles = $user->roles;
 
-			echo '<meta name="ez-user-role" content="' . implode( ',', $roles ) . '">';
+			echo '<meta name="ez-user-role" content="' . esc_attr( implode( ',', $roles ) ) . '">';
 		}
 
 		if ( ! isset( $this->config->meta_tags ) ) {
@@ -1456,6 +1469,7 @@ class Ezoic_AdTester extends Ezoic_Feature {
 		}
 
 		return ! $this->do_insert
+			|| $this->is_current_url_excluded()
 			|| ! isset( $this->config->placeholders )
 			|| ! is_array( $this->config->placeholders )
 			|| empty( $this->config->placeholders )

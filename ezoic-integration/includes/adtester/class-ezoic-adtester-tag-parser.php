@@ -116,8 +116,12 @@ class Ezoic_AdTester_Tag_Parser
 				// Extract tag element name
 				$tag_element = \ez_strtolower(\ez_substr($tag[0], 2, \ez_strlen($tag[0]) - 3));
 
-				// Closing tag - pop element from the stack and store
-				if (!$in_script_element) {
+				// Closing tag - pop element from the stack and store.
+				// Script is never pushed (open-tag branch sets the in-script
+				// flag before the push guard), so </script> must not run
+				// stack-balancing: it would pop a still-open ancestor. That
+				// includes a later/stray </script> after the flag is cleared.
+				if (!$in_script_element && $tag_element !== 'script') {
 					// If this closing element cannot be attributed to the top of the stack, begin walking the stack
 					while (\count($tag_stack) > 0 && $tag_element !== $last_tag) {
 						$tag_temp = array_pop($tag_stack);
@@ -148,10 +152,9 @@ class Ezoic_AdTester_Tag_Parser
 					}
 				}
 
-				// Closing script element, begin recording tags again
+				// Closing script element, begin recording tags again.
 				if ($tag_element === 'script') {
 					$in_script_element = false;
-					$tag_temp = array_pop($tag_stack);
 				}
 			}
 		}

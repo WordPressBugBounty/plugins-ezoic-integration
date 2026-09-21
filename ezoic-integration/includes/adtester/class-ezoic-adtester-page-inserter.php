@@ -32,6 +32,16 @@ class Ezoic_AdTester_Page_Inserter extends Ezoic_AdTester_Inserter
 				}
 				$placeholder = $this->config->placeholders[$rule->placeholder_id];
 
+				if (!Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder)) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule rejected: Placement {$placeholder->position_id} for position type {$placeholder->position_type} is not the active placement.",
+						'Page Ads',
+						'info',
+						$placeholder->position_id
+					);
+					continue;
+				}
+
 				if ($rule->display === $insert_position) {
 					echo $placeholder->embed_code();
 					Ezoic_Integration_Logger::track_insertion($placeholder->position_id);

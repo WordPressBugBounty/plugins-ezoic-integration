@@ -134,19 +134,24 @@ class Ezoic_Integration_Public
 			);
 		}
 
-		// sa.min.js first in <head> so its download starts before blocking theme/plugin CSS/JS.
+		// All three run at wp_head priority 0, ahead of core's own output at priority 1
+		// (the title tag) so sa.min.js starts as early as the head allows. Same-priority
+		// callbacks fire in registration order, so the order of these three calls is the
+		// document order: keep privacy first. sa.min.js detects Gatekeeper by scanning
+		// document.scripts when it initializes, and a cached async sa.min.js can run before
+		// later <head> tags are parsed; missing that detection makes it wait on a publisher
+		// CMP and then inject a duplicate Gatekeeper pair. All three tags are async, so
+		// emitting the privacy pair first does not block the parser ahead of sa.min.js.
+		if ((isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) || $is_preview_mode) {
+			$this->loader->add_action('wp_head', $this, 'inject_privacy_scripts', 0);
+		}
+
 		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
 			$this->loader->add_action('wp_head', $this, 'inject_ezoic_js_scripts', 0);
 		}
 
-		// Analytics is async; keep it after sa.min.js in document order (priority 1 > 0).
-		// Always emit when JS integration is enabled — independent of auto-insert.
-		$this->loader->add_action('wp_head', $this, 'inject_ezoic_analytics_script', 1);
-
-		// Privacy scripts are async so they do not block discovery of sa.min.js.
-		if ((isset($js_options['js_enable_privacy_scripts']) && $js_options['js_enable_privacy_scripts']) || $is_preview_mode) {
-			$this->loader->add_action('wp_head', $this, 'inject_privacy_scripts', 5);
-		}
+		// Always emit when JS integration is enabled, independent of auto-insert.
+		$this->loader->add_action('wp_head', $this, 'inject_ezoic_analytics_script', 0);
 
 		// Add fallback showAds() call in footer if no placeholders were inserted
 		if ((isset($js_options['js_auto_insert_scripts']) && $js_options['js_auto_insert_scripts']) || $is_preview_mode) {
@@ -233,7 +238,7 @@ class Ezoic_Integration_Public
 		}
 
 		$js_enabled = get_option('ezoic_js_integration_enabled', false);
-		if (!$js_enabled) {
+		if (!$js_enabled && !$this->is_js_preview_mode()) {
 			return;
 		}
 
