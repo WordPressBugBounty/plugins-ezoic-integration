@@ -7,22 +7,26 @@ namespace Ezoic_Namespace;
  */
 class Ezoic_AdTester_Parent_Filter
 {
-	// Parses a selector (e.g. div#my-id.my-class)
-	const FILTER_PARSER = '/^([\*|\w|\-]+)?(#[\w|\-]+)?(\.[\w|\-|\.]+)*$/i';
+	// Parses a selector (e.g. div#my-id.foo.bar)
+	const FILTER_PARSER = '/^([\*\w\-]+)?(#[\w\-]+)?((?:\.[\w\-]+)*)$/i';
 
 	public $tag;
 	public $id;
-	public $class;
+	public $classes;
 
 	public function __construct() {}
 
 	/**
-	 * Parses a filter string and returns an Ezoic_AdTester_Parent_Filter
+	 * Parses a filter string and returns an Ezoic_AdTester_Parent_Filter, or null when
+	 * the selector is not a plain tag#id.class form. An empty filter matches every
+	 * parent, so an unparsed selector must never become one.
 	 */
 	public static function parse_filter($filter)
 	{
 		// Parse filter string
-		preg_match_all(Ezoic_AdTester_Parent_Filter::FILTER_PARSER, $filter, $parsed);
+		if (!\is_string($filter) || !preg_match_all(Ezoic_AdTester_Parent_Filter::FILTER_PARSER, \trim($filter), $parsed)) {
+			return null;
+		}
 
 		// The new filter
 		$new_filter = new Ezoic_AdTester_Parent_Filter();
@@ -37,24 +41,50 @@ class Ezoic_AdTester_Parent_Filter
 			$new_filter->id = \ez_strtolower(\ez_substr($parsed[2][0], 1));
 		}
 
-		// Class
+		// Classes: split ".foo.bar" into every non-empty token
 		if (!empty($parsed[3][0])) {
-			$new_filter->class = \ez_strtolower(\ez_substr($parsed[3][0], 1));
+			$class_tokens = array();
+			foreach (\explode('.', $parsed[3][0]) as $token) {
+				if ($token !== '') {
+					$class_tokens[] = \ez_strtolower($token);
+				}
+			}
+			if (!empty($class_tokens)) {
+				$new_filter->classes = $class_tokens;
+			}
+		}
+
+		if (!isset($new_filter->tag) && !isset($new_filter->id) && !isset($new_filter->classes)) {
+			return null;
 		}
 
 		return $new_filter;
 	}
 
 	/**
-	 * Indicates if the filter matches the current paragraph
+	 * Indicates if the filter matches the current paragraph.
+	 * Matching is case-insensitive: parse_filter() lowercases the filter. The tag
+	 * parser already lowercases tag names but keeps id/class values as written, so
+	 * the element's id/class are lowercased here. When the filter lists multiple
+	 * classes, every required class must be present on the element.
 	 */
 	public function is_valid($paragraph)
 	{
 		foreach ($paragraph->lineage as $parent_element) {
 			// Evaluate filter
 			$tag_match		= !isset($this->tag)		|| (\array_key_exists('tag', $parent_element) && $this->tag === $parent_element['tag']);
-			$id_match		= !isset($this->id)		|| (\array_key_exists('id', $parent_element) && $this->id === $parent_element['id']);
-			$class_match	= !isset($this->class)	|| (\array_key_exists('class_list', $parent_element) && in_array($this->class, $parent_element['class_list']));
+			$id_match		= !isset($this->id)		|| (\array_key_exists('id', $parent_element) && $this->id === \ez_strtolower($parent_element['id']));
+			$class_match	= !isset($this->classes);
+			if (!$class_match && \array_key_exists('class_list', $parent_element)) {
+				$element_classes = \array_map('\ez_strtolower', $parent_element['class_list']);
+				$class_match = true;
+				foreach ($this->classes as $required_class) {
+					if (!\in_array($required_class, $element_classes, true)) {
+						$class_match = false;
+						break;
+					}
+				}
+			}
 
 			// Return true if all matches are true
 			if ($tag_match && $id_match && $class_match) {
@@ -360,7 +390,10 @@ class Ezoic_AdTester_Content_Inserter2 extends Ezoic_AdTester_Inserter
 		// Extract filter rules
 		if (!empty($this->config->parent_filters)) {
 			foreach ($this->config->parent_filters as $filter) {
-				$filters[] = Ezoic_AdTester_Parent_Filter::parse_filter($filter);
+				$parsed_filter = Ezoic_AdTester_Parent_Filter::parse_filter($filter);
+				if ($parsed_filter !== null) {
+					$filters[] = $parsed_filter;
+				}
 			}
 		}
 
