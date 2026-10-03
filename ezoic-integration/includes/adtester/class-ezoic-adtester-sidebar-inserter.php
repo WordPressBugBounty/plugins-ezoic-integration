@@ -255,6 +255,14 @@ class Ezoic_AdTester_Sidebar_Inserter extends Ezoic_AdTester_Inserter
 				$ph_config->display != 'disabled' &&			// Rule is enabled
 				$ph_config->display == 'after_widget'			// Rule is a sidebar rule
 			) {
+				if (!isset($this->config->placeholders[$ph_config->placeholder_id])) {
+					Ezoic_Integration_Logger::console_debug(
+						"Rule skipped - placeholder_id '{$ph_config->placeholder_id}' not found in config.",
+						'Sidebar Ads',
+						'warn'
+					);
+					continue;
+				}
 				$placeholder = $this->config->placeholders[$ph_config->placeholder_id];
 
 				// Skip if we've already added this placement ID

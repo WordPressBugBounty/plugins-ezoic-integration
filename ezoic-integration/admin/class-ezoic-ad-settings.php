@@ -322,14 +322,37 @@ class Ezoic_Integration_Ad_Settings
 	}
 
 	/**
+	 * Decodes a save request body. Returns a 400 WP_Error unless the body is a
+	 * JSON object carrying every required property, so a malformed request can
+	 * never overwrite the stored configuration with nulls.
+	 */
+	private static function decode_payload($request_data, array $required)
+	{
+		$payload = \json_decode($request_data->get_body());
+		if (!\is_object($payload)) {
+			return new \WP_Error('ezoic_invalid_payload', 'Request body must be a JSON object', array('status' => 400));
+		}
+
+		foreach ($required as $property) {
+			if (!\property_exists($payload, $property) || $payload->$property === null) {
+				return new \WP_Error('ezoic_invalid_payload', 'Missing required field: ' . $property, array('status' => 400));
+			}
+		}
+
+		return $payload;
+	}
+
+	/**
 	 * Save placeholder configuration
 	 */
 	public function save_rule($request_data)
 	{
-		$this->initialize();
+		$payload = self::decode_payload($request_data, array('placeholderId', 'pageType', 'display', 'displayOption'));
+		if (\is_wp_error($payload)) {
+			return $payload;
+		}
 
-		// Parse payload
-		$payload = \json_decode($request_data->get_body());
+		$this->initialize();
 
 		// Load config
 		$config = $this->adtester->config;
@@ -387,10 +410,24 @@ class Ezoic_Integration_Ad_Settings
 	 */
 	public function save_settings($request_data)
 	{
-		$this->initialize();
+		$payload = self::decode_payload($request_data, array(
+			'paragraphTags',
+			'excerptTags',
+			'excludeParents',
+			'excludeClasses',
+			'sidebarId',
+			'userRolesWithAdsDisabled',
+			'metaTags',
+			'excludeUrls',
+			'enableAdPos',
+			'enablePlacementIdSelection',
+			'excludeWordCount',
+		));
+		if (\is_wp_error($payload)) {
+			return $payload;
+		}
 
-		// Parse payload
-		$payload = \json_decode($request_data->get_body());
+		$this->initialize();
 
 		// Load config
 		$config = $this->adtester->config;

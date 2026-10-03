@@ -232,7 +232,7 @@ class Ezoic_JS_Integration_Settings
 		$options = get_option('ezoic_js_integration_options', $this->default_js_integration_options());
 		$value = isset($options['js_scroll_rail_selectors']) ? $options['js_scroll_rail_selectors'] : '';
 
-		$html = '<textarea id="js_scroll_rail_selectors" name="ezoic_js_integration_options[js_scroll_rail_selectors]" rows="5" cols="50" class="large-text code">' . esc_attr($value) . '</textarea>';
+		$html = '<textarea id="js_scroll_rail_selectors" name="ezoic_js_integration_options[js_scroll_rail_selectors]" rows="5" cols="50" class="large-text code">' . esc_textarea($value) . '</textarea>';
 		$html .= '<p class="description">' . __('Enter one CSS class or element ID per line, using a leading "." or "#" (for example <code>.sidebar</code> or <code>#rail-left</code>). Maximum 10 selectors.', 'ezoic') . '</p>';
 
 		echo $html;
@@ -299,10 +299,7 @@ class Ezoic_JS_Integration_Settings
 			// Send plugin data to notify backend of integration change
 			Ezoic_Integration_Plugin_Data_Service::schedule_plugin_data_send();
 
-			// Trigger integration recheck by clearing the check time
-			$options = get_option('ezoic_integration_status');
-			$options['check_time'] = '';
-			update_option('ezoic_integration_status', $options);
+			self::clear_integration_check_time();
 
 			// Optionally clear JavaScript integration options
 			// delete_option('ezoic_js_integration_options');
@@ -311,6 +308,22 @@ class Ezoic_JS_Integration_Settings
 			wp_safe_redirect(admin_url('options-general.php?page=' . EZOIC__PLUGIN_SLUG . '&tab=js_integration&js_integration_disabled=1'));
 			exit;
 		}
+	}
+
+	/**
+	 * Force an integration recheck by clearing the stored check time.
+	 *
+	 * A missing status option is left missing: writing a partial array would stop
+	 * initialize_display_options() from seeding its defaults.
+	 */
+	private static function clear_integration_check_time()
+	{
+		$options = get_option('ezoic_integration_status');
+		if (!is_array($options)) {
+			return;
+		}
+		$options['check_time'] = '';
+		update_option('ezoic_integration_status', $options);
 	}
 
 	/**
@@ -323,15 +336,19 @@ class Ezoic_JS_Integration_Settings
 		$current_options = array_merge($this->default_js_integration_options(), is_array($current_options) ? $current_options : array());
 		$settings = is_array($settings) ? $settings : array();
 
-		// Sanitize each setting
+		// Runs on every update_option(), not only the settings form: programmatic writers pass the
+		// full stored array (unchecked boxes present as 0), so read values, never key existence.
 		$sanitized = array();
-		$sanitized['js_auto_insert_scripts'] = isset($settings['js_auto_insert_scripts']) ? 1 : 0;
-		$sanitized['js_enable_privacy_scripts'] = isset($settings['js_enable_privacy_scripts']) ? 1 : 0;
-		$sanitized['js_use_wp_placeholders'] = isset($settings['js_use_wp_placeholders']) ? 1 : 0;
-		$sanitized['js_reserve_placeholder_space'] = isset($current_options['js_reserve_placeholder_space']) ? (int) (bool) $current_options['js_reserve_placeholder_space'] : 0;
-		$sanitized['js_reserve_all_placeholder_space'] = isset($current_options['js_reserve_all_placeholder_space']) ? (int) (bool) $current_options['js_reserve_all_placeholder_space'] : 0;
-		$sanitized['js_enable_scroll_rails'] = isset($settings['js_enable_scroll_rails']) ? 1 : 0;
-		$sanitized['js_scroll_rail_replace_sidebar'] = isset($settings['js_scroll_rail_replace_sidebar']) ? 1 : 0;
+		$sanitized['js_auto_insert_scripts'] = empty($settings['js_auto_insert_scripts']) ? 0 : 1;
+		$sanitized['js_enable_privacy_scripts'] = empty($settings['js_enable_privacy_scripts']) ? 0 : 1;
+		$sanitized['js_use_wp_placeholders'] = empty($settings['js_use_wp_placeholders']) ? 0 : 1;
+		// Not on the settings form; only the Ad Settings screen writes these.
+		$reserve_source = isset($settings['js_reserve_placeholder_space']) ? $settings : $current_options;
+		$sanitized['js_reserve_placeholder_space'] = empty($reserve_source['js_reserve_placeholder_space']) ? 0 : 1;
+		$reserve_all_source = isset($settings['js_reserve_all_placeholder_space']) ? $settings : $current_options;
+		$sanitized['js_reserve_all_placeholder_space'] = empty($reserve_all_source['js_reserve_all_placeholder_space']) ? 0 : 1;
+		$sanitized['js_enable_scroll_rails'] = empty($settings['js_enable_scroll_rails']) ? 0 : 1;
+		$sanitized['js_scroll_rail_replace_sidebar'] = empty($settings['js_scroll_rail_replace_sidebar']) ? 0 : 1;
 		$selector_raw = isset($settings['js_scroll_rail_selectors']) ? $settings['js_scroll_rail_selectors'] : '';
 		$sanitized['js_scroll_rail_selectors'] = implode("\n", self::parse_scroll_rail_selectors($selector_raw));
 
@@ -391,9 +408,7 @@ class Ezoic_JS_Integration_Settings
 
 		// Trigger integration recheck if any settings changed
 		if ($sanitized !== $current_options) {
-			$options = get_option('ezoic_integration_status');
-			$options['check_time'] = '';
-			update_option('ezoic_integration_status', $options);
+			self::clear_integration_check_time();
 
 			// Clear duplicate script detection cache when settings change
 			delete_transient('ezoic_duplicate_scripts_check');

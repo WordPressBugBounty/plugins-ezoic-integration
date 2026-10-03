@@ -66,8 +66,8 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 		$redirect_result = Ezoic_AdsTxtManager::ezoic_verify_adstxt_redirect();
 
 		if ($redirect_result['status'] === false) {
-			// Don't rename file if it's an invalid ATM ID issue
-			if (isset($redirect_result['error']) && $redirect_result['error'] === 'invalid_atm_id') {
+			// The redirect already reaches Ads.txt Manager, so renaming the local file cannot help
+			if (isset($redirect_result['error']) && in_array($redirect_result['error'], array('invalid_atm_id', 'atm_unreachable'), true)) {
 				update_option('ezoic_adstxtmanager_status', $redirect_result);
 				return;
 			}

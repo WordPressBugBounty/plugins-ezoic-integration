@@ -658,6 +658,11 @@ class Ezoic_Cdn extends Ezoic_Feature {
 			$urls[] = get_day_link( gmdate( 'Y', $date ), gmdate( 'm', $date ), gmdate( 'j', $date ) );
 		}
 
+		// Drop non-string entries (e.g. a WP_Error from get_term_link() on a
+		// deleted term) before the GTranslate URL parsing and array_unique(),
+		// which both fatal on an object without __toString().
+		$urls = array_filter( $urls, 'is_string' );
+
 		// GTranslate
 		$modified_urls = $this->modify_urls_for_gtranslate( $urls );
 		if ( is_array( $modified_urls ) && ! empty( $modified_urls ) ) {

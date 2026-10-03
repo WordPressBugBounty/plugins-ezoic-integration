@@ -145,11 +145,11 @@ class Ezoic_AdsTxtManager_Settings
 	?>
 		<?php if ($auto_detect): ?>
 			<!-- Hidden field to preserve ID value when auto-detect is enabled -->
-			<input type="hidden" name="ezoic_adstxtmanager_id" value="<?php echo $adstxtmanager_id; ?>" />
-			<p class="description"><strong><?php echo $adstxtmanager_id; ?></strong></p>
+			<input type="hidden" name="ezoic_adstxtmanager_id" value="<?php echo esc_attr($adstxtmanager_id); ?>" />
+			<p class="description"><strong><?php echo esc_html($adstxtmanager_id); ?></strong></p>
 		<?php else: ?>
 			<input type="text" name="ezoic_adstxtmanager_id" class="regular-text code"
-				value="<?php echo $adstxtmanager_id; ?>" />
+				value="<?php echo esc_attr($adstxtmanager_id); ?>" />
 			<p class="description">
 				Manually enter your Ads.txt Manager ID.
 			</p>

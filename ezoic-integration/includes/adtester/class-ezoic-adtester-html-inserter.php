@@ -25,6 +25,16 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 				}
 				$placeholder = $this->config->placeholders[$ph_config->placeholder_id];
 
+				if (Ezoic_AdTester_Sidebar_Inserter::should_replace_sidebar_placeholder($placeholder->position_type)) {
+					Ezoic_Integration_Logger::console_debug(
+						"HTML rule rejected for scroll rail replacement: Placement {$placeholder->position_id} for position type {$placeholder->position_type}",
+						'HTML Ads',
+						'info',
+						$placeholder->position_id
+					);
+					continue;
+				}
+
 				if (Ezoic_AdTester_Inserter::should_include_placeholder($this->config, $placeholder, true)) {
 					$rules[] = $ph_config;
 				}

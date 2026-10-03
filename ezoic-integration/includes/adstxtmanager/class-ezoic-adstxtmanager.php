@@ -164,7 +164,11 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 						}
 					}
 
-					return array('status' => true);
+					return array(
+						'status' => false,
+						'error' => 'atm_unreachable',
+						'message' => 'Your ads.txt redirect is set up, but your ads.txt file could not be loaded from Ads.txt Manager. Please try again later, or contact support if the issue persists.'
+					);
 				}
 			}
 		}
@@ -216,9 +220,10 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 				<?php
 					break;
 				case 'server_error':
+					$http_code = isset($detection_result['code']) ? absint($detection_result['code']) : 0;
 				?>
 					<div class="notice notice-error">
-						<p><strong>Server Error:</strong> Ezoic servers returned an error (HTTP <?php echo isset($detection_result['code']) ? $detection_result['code'] : 'unknown'; ?>). Please try again later or contact support if the issue persists.</p>
+						<p><strong>Server Error:</strong> Ezoic servers returned an error (HTTP <?php echo $http_code > 0 ? esc_html( (string) $http_code ) : 'unknown'; ?>). Please try again later or contact support if the issue persists.</p>
 					</div>
 				<?php
 					break;
@@ -265,6 +270,13 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 							<li style="margin-bottom: 8px;"><strong>Enable Auto-Detection</strong> below to automatically find and use the correct ID</li>
 							<li style="margin-bottom: 8px;">Or check your correct Ads.txt Manager ID in your <a href="https://pubdash.ezoic.com/ezoicads/adtransparency" target="_blank"><strong>Ezoic Publisher Dashboard</strong></a></li>
 						</ul>
+					</div>
+				<?php
+				} elseif (isset($adstxtmanager_status['error']) && $adstxtmanager_status['error'] === 'atm_unreachable') {
+				?>
+					<div class="notice notice-error">
+						<p><strong>Ads.txt Unavailable:</strong> Your ads.txt redirect is set up, but your ads.txt file could not be loaded from Ads.txt Manager.</p>
+						<p>Try refreshing this page in a few minutes, or contact support if the issue persists.</p>
 					</div>
 				<?php
 				} else {
