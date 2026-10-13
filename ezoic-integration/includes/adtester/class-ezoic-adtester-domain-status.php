@@ -72,14 +72,17 @@ class Ezoic_AdTester_Domain_Status
 				} else {
 					$this->error_message = 'Unknown error occurred while communicating with Ezoic backend.';
 				}
-			} else {
+			} elseif ($deserialized && isset($deserialized->data)) {
 				// Initialize $ads with successful response
 				$this->set($deserialized->data);
+			} else {
+				$this->has_error = true;
+				$this->error_message = 'Malformed or empty response from Ezoic backend.';
 			}
 		} else {
 			Ezoic_Integration_Logger::log_error('Error communicating with backend: ' . print_r($response, true), 'AdTester');
 			$this->has_error = true;
-			$this->error_message = print_r($response, true);
+			$this->error_message = 'Error communicating with Ezoic backend.';
 		}
 
 		return $this;
@@ -87,11 +90,11 @@ class Ezoic_AdTester_Domain_Status
 
 	private function set($data)
 	{
-		if ($data) {
-			$this->monetization_eligible		= $data->monetizationEligible;
-			$this->placeholders_created		= $data->placeholdersCreated;
-			$this->placeholder_count_other	= $data->placeholderCountOther;
-			$this->placeholder_count_wp		= $data->placeholderCountWordPress;
+		if (is_object($data)) {
+			$this->monetization_eligible		= isset($data->monetizationEligible) ? $data->monetizationEligible : false;
+			$this->placeholders_created		= isset($data->placeholdersCreated) ? $data->placeholdersCreated : false;
+			$this->placeholder_count_other	= isset($data->placeholderCountOther) ? $data->placeholderCountOther : 0;
+			$this->placeholder_count_wp		= isset($data->placeholderCountWordPress) ? $data->placeholderCountWordPress : 0;
 		}
 	}
 }

@@ -15,6 +15,7 @@ class Ezoic_Cdn extends Ezoic_Feature {
 
 	private $ezoic_cdn_already_purged = array();
 	private $ezoic_cdn_keys_purged = array();
+	private $ezoic_cdn_pending_deleted_posts = array();
 
 	public function __construct() {
 		$this->is_public_enabled = true;
@@ -30,6 +31,7 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		$loader->add_action( 'publish_post', $this, 'ezoic_cdn_published', 10, 2 );
 		$loader->add_action( 'publish_page', $this, 'ezoic_cdn_published', 10, 2 );
 		$loader->add_action( 'transition_post_status', $this, 'ezoic_cdn_handle_post_transition', 10, 3 );
+		$this->register_post_delete_hooks( $loader );
 
 		// Comment-related hooks
 		$loader->add_action( 'comment_post', $this, 'ezoic_handle_new_comment', 100, 3 );
@@ -42,10 +44,16 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		$loader->add_action( 'ezoic_purge_post', $this, 'ezoic_cdn_purge_post_hook', 10, 1 );
 	}
 
+	// Public and admin hooks register on disjoint requests, so deletes from REST, WP-CLI and cron need both.
+	private function register_post_delete_hooks( $loader ) {
+		$loader->add_action( 'before_delete_post', $this, 'ezoic_cdn_cache_post_before_delete', 10, 1 );
+		$loader->add_action( 'after_delete_post', $this, 'ezoic_cdn_post_deleted', 100, 2 );
+	}
+
 	public function register_admin_hooks( $loader ) {
 		// Post-related hooks
 		$loader->add_action( 'post_updated', $this, 'ezoic_cdn_post_updated', 10, 3 );
-		$loader->add_action( 'after_delete_post', $this, 'ezoic_cdn_post_deleted', 100, 2 );
+		$this->register_post_delete_hooks( $loader );
 
 		// Comment-related hooks
 		$loader->add_action( 'edit_comment', $this, 'ezoic_cdn_edit_comment', 100, 2 );
@@ -459,14 +467,20 @@ class Ezoic_Cdn extends Ezoic_Feature {
 			}
 		} else {
 			$response = json_decode( $results['body'], true );
-			if ( $response && is_array( $response ) && $response['Success'] ) {
+			if ( is_array( $response ) && ! empty( $response['Success'] ) ) {
 				// successfully busted cache!
 				return array( true, "" );
 			} else {
-				// error
-				error_log( 'Error accessing Ezoic API: ' . $response['Error'] );
+				if ( is_array( $response ) && isset( $response['Error'] ) && is_scalar( $response['Error'] ) ) {
+					// Callers render this in the admin unescaped, so strip markup from the remote value.
+					$error = wp_strip_all_tags( (string) $response['Error'] );
+				} else {
+					$code  = (int) wp_remote_retrieve_response_code( $results );
+					$error = 'Unexpected response from Ezoic API (HTTP ' . ( $code ? $code : 'unknown' ) . ')';
+				}
+				error_log( 'Error accessing Ezoic API: ' . $error );
 
-				return array( false, $response['Error'] );
+				return array( false, $error );
 			}
 		}
 	}
@@ -868,13 +882,29 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		}
 	}
 
+	public function ezoic_cdn_cache_post_before_delete( $post_id ) {
+		$post = get_post( $post_id );
+		if ( $post ) {
+			$this->ezoic_cdn_pending_deleted_posts[ $post_id ] = clone $post;
+		}
+	}
+
 	public function ezoic_cdn_post_deleted( $post_id, WP_Post $old_post = null ) {
+		$cached = isset( $this->ezoic_cdn_pending_deleted_posts[ $post_id ] )
+			? $this->ezoic_cdn_pending_deleted_posts[ $post_id ]
+			: null;
+		unset( $this->ezoic_cdn_pending_deleted_posts[ $post_id ] );
+
 		if ( ! self::ezoic_cdn_is_enabled() ) {
 			return;
 		}
 
 		if ( empty( $old_post ) ) {
-			$old_post = get_post( $post_id );
+			$old_post = $cached ? $cached : get_post( $post_id );
+		}
+
+		if ( empty( $old_post ) ) {
+			return;
 		}
 
 		if ( wp_is_post_revision( $old_post ) ) {
@@ -1175,17 +1205,20 @@ class Ezoic_Cdn extends Ezoic_Feature {
 				$urls[] = get_term_feed_link( $id, $taxonomy, 'rss2' );
 				self::ezoic_cdn_clear_urls( $urls );
 
-				$term = get_term( $id, $taxonomy );
-
 				if ( 'category' === $taxonomy ) {
-					$keys[] = "category-{$id}";
-					$keys[] = "category-{$term->slug}";
+					$key_prefix = 'category-';
 				} elseif ( 'post_tag' === $taxonomy ) {
-					$keys[] = "tag-{$id}";
-					$keys[] = "tag-{$term->slug}";
+					$key_prefix = 'tag-';
 				} else {
-					$keys[] = "tax-{$taxonomy}-{$id}";
-					$keys[] = "tax-{$taxonomy}-{$term->slug}";
+					$key_prefix = "tax-{$taxonomy}-";
+				}
+
+				$keys = array( $key_prefix . $id );
+
+				// get_term() returns null for a deleted term and WP_Error for an invalid taxonomy.
+				$term = get_term( $id, $taxonomy );
+				if ( $term && ! is_wp_error( $term ) ) {
+					$keys[] = $key_prefix . $term->slug;
 				}
 				self::ezoic_cdn_clear_surrogate_keys( $keys, self::ezoic_cdn_get_domain() );
 

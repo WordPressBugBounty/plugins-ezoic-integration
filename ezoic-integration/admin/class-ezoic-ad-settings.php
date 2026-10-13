@@ -324,9 +324,10 @@ class Ezoic_Integration_Ad_Settings
 	/**
 	 * Decodes a save request body. Returns a 400 WP_Error unless the body is a
 	 * JSON object carrying every required property, so a malformed request can
-	 * never overwrite the stored configuration with nulls.
+	 * never overwrite the stored configuration with nulls. Properties listed in
+	 * $required_arrays must also be JSON arrays.
 	 */
-	private static function decode_payload($request_data, array $required)
+	private static function decode_payload($request_data, array $required, array $required_arrays = array())
 	{
 		$payload = \json_decode($request_data->get_body());
 		if (!\is_object($payload)) {
@@ -336,6 +337,12 @@ class Ezoic_Integration_Ad_Settings
 		foreach ($required as $property) {
 			if (!\property_exists($payload, $property) || $payload->$property === null) {
 				return new \WP_Error('ezoic_invalid_payload', 'Missing required field: ' . $property, array('status' => 400));
+			}
+		}
+
+		foreach ($required_arrays as $property) {
+			if (!\property_exists($payload, $property) || !\is_array($payload->$property)) {
+				return new \WP_Error('ezoic_invalid_payload', 'Field must be an array: ' . $property, array('status' => 400));
 			}
 		}
 
@@ -422,6 +429,12 @@ class Ezoic_Integration_Ad_Settings
 			'enableAdPos',
 			'enablePlacementIdSelection',
 			'excludeWordCount',
+		), array(
+			'paragraphTags',
+			'excerptTags',
+			'excludeParents',
+			'userRolesWithAdsDisabled',
+			'metaTags',
 		));
 		if (\is_wp_error($payload)) {
 			return $payload;

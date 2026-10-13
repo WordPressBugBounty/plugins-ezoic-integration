@@ -33,11 +33,11 @@ class Ezoic_Integration_WP_Response implements iEzoic_Integration_Response {
 
 		} else {
 			if( is_wp_error($response) ) {
-				$final = $final . "<!-- " . $response->get_error_message() . " -->";
+				$final = $final . "<!-- " . Ezoic_Integration_Request_Utils::escape_html_comment_text( $response->get_error_message() ) . " -->";
 			} elseif (isset($response['response']) &&
 			          isset($response['response']['code']) &&
 			          !in_array($response['response']['code'], $success_codes)) {
-				$final = $final . "<!-- " . $response['response']['code'] . " -->";
+				$final = $final . "<!-- " . Ezoic_Integration_Request_Utils::escape_html_comment_text( $response['response']['code'] ) . " -->";
 			}
 		}
 

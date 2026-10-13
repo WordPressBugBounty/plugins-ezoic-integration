@@ -89,6 +89,18 @@ class Ezoic_Integration_Request_Utils {
 		);
 	}
 
+	/**
+	 * Makes a transport error or status code safe to embed inside an HTML comment:
+	 * escapes markup and collapses "--" so the value cannot close the comment early.
+	 *
+	 * @param mixed $value
+	 * @return string
+	 */
+	public static function escape_html_comment_text($value) {
+		$text = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+		return preg_replace('/-{2,}/', '-', $text);
+	}
+
 	public static function get_ezoic_server_address() {
 		return EZOIC_GATEWAY_URL . "/wp/data.go";
 	}

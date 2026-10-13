@@ -19,11 +19,15 @@ class Ezoic_Integration_File_Content_Collector implements iEzoic_Integration_Con
 		if ( file_exists( $this->config_path ) && is_readable( $this->config_path ) ) {
 			$cache_content  = file_get_contents( $this->config_path );
 			$config_content = json_decode( $cache_content, true );
+			if ( ! is_array( $config_content ) ) {
+				$config_content = array();
+			}
+			$cache_identity = isset( $config_content["cache_identity"] ) ? $config_content["cache_identity"] : null;
 			$file_name      = "";
-			if ( $config_content["cache_identity"] == Ezoic_Cache_Identity::W3_TOTAL_CACHE ) {
+			if ( $cache_identity === Ezoic_Cache_Identity::W3_TOTAL_CACHE ) {
 				$file_name = "_index.html";
-			} elseif ( $config_content["cache_identity"] == Ezoic_Cache_Identity::WP_SUPER_CACHE ||
-			           $config_content["cache_identity"] == Ezoic_Cache_Identity::WP_ROCKET_CACHE ) {
+			} elseif ( $cache_identity === Ezoic_Cache_Identity::WP_SUPER_CACHE ||
+			           $cache_identity === Ezoic_Cache_Identity::WP_ROCKET_CACHE ) {
 				$file_name = "index.html";
 			}
 
@@ -60,8 +64,9 @@ class Ezoic_Integration_File_Content_Collector implements iEzoic_Integration_Con
 
 		// Validate before any filesystem call so an unsafe path is never
 		// stat'd (avoids turning file_exists()/is_readable() into a
-		// file-existence oracle for attacker-controlled paths).
-		if ( ! Ezoic_Integration_Path_Sanitizer::is_path_safe( $cached_file, $cache_path ) ) {
+		// file-existence oracle for attacker-controlled paths). Both candidate
+		// file names are slash-free constants, so they share this directory.
+		if ( ! Ezoic_Integration_Path_Sanitizer::is_path_safe( dirname( $cached_file ), $cache_path ) ) {
 			return '';
 		}
 
@@ -71,14 +76,15 @@ class Ezoic_Integration_File_Content_Collector implements iEzoic_Integration_Con
 			$file_name   = "_index_slash_ssl.html"; // W3_TOTAL_CACHE cache file
 			$cached_file = $cache_path . $server_name . $request_uri . $file_name;
 
-			if ( ! Ezoic_Integration_Path_Sanitizer::is_path_safe( $cached_file, $cache_path ) ) {
-				return '';
-			}
-
 			if ( ! file_exists( $cached_file ) || ! is_readable( $cached_file ) ) {
 				return '';
 			}
 
+		}
+
+		// The directory check above cannot see a symlinked cache file; re-check now that it exists.
+		if ( ! Ezoic_Integration_Path_Sanitizer::is_path_safe( $cached_file, $cache_path ) ) {
+			return '';
 		}
 
 		$content = file_get_contents( $cached_file, true );

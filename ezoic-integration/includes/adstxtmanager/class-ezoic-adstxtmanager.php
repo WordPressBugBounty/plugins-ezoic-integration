@@ -143,8 +143,9 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 
 			if ($response_code >= 301 && $response_code <= 308 && is_string($redirect_location) && $redirect_location !== '') {
 
-				if (strpos($redirect_location, 'srv.adstxtmanager.com') !== false) {
-					$final_response = wp_remote_get($redirect_location, array(
+				$atm_url = self::adstxtmanager_redirect_url($redirect_location);
+				if ($atm_url !== null) {
+					$final_response = wp_remote_get($atm_url, array(
 						'timeout' => 5,
 						'redirection' => 0,
 						'headers' => array(
@@ -178,6 +179,42 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 			'error' => 'redirect_failed',
 			'message' => 'Your ads.txt is not redirecting properly. Please check your website configuration, including permalink settings (Settings > Permalinks), .htaccess file permissions, and possible plugin conflicts that may affect URL rewriting or redirects.'
 		);
+	}
+
+	/**
+	 * Returns the Ads.txt Manager URL to follow for a redirect Location header, or null
+	 * when the redirect does not point at srv.adstxtmanager.com.
+	 *
+	 * The returned URL is rebuilt on the fixed origin, and a Location carrying userinfo or
+	 * characters outside printable ASCII is rejected, so a value that URL parsers read
+	 * differently cannot send the follow-up request to another host or corrupt the request.
+	 *
+	 * @param string $location
+	 * @return string|null
+	 */
+	private static function adstxtmanager_redirect_url($location)
+	{
+		if (preg_match('/[^\x21-\x7e]/', $location)) {
+			return null;
+		}
+		$parts = wp_parse_url($location);
+		if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+			return null;
+		}
+		if (!in_array(strtolower($parts['scheme']), array('http', 'https'), true)) {
+			return null;
+		}
+		if (strtolower($parts['host']) !== 'srv.adstxtmanager.com') {
+			return null;
+		}
+		if (isset($parts['user']) || isset($parts['pass'])) {
+			return null;
+		}
+
+		$path = isset($parts['path']) && $parts['path'] !== '' ? $parts['path'] : '/';
+		$query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+
+		return 'https://srv.adstxtmanager.com' . $path . $query;
 	}
 
 	function ezoic_adstxtmanager_display_notice()
@@ -256,7 +293,7 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 				}
 				?>
 				<div class="notice notice-success">
-					<p><strong>Success:</strong> Your ads.txt redirect is successfully set up.&nbsp;&nbsp;&nbsp;<a class="button button-info" href="/ads.txt?<?php echo $view_url_param; ?>" target="_blank">View Ads.txt</a></p>
+					<p><strong>Success:</strong> Your ads.txt redirect is successfully set up.&nbsp;&nbsp;&nbsp;<a class="button button-info" href="<?php echo esc_url('/ads.txt?' . $view_url_param); ?>" target="_blank">View Ads.txt</a></p>
 				</div>
 				<?php
 			} else if (isset($adstxtmanager_status['status']) && $adstxtmanager_status['status'] === false) {

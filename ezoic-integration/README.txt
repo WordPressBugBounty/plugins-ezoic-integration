@@ -114,6 +114,13 @@ No, the plugin is designed to be lightweight and won't impact your site's perfor
 Yes, you have full control over ad categories and can block specific ads. The plugin also provides user targeting, URL exclusions, and content filters for precise ad placement control.
 
 == Changelog ==
+= 2.25.10 =
+* Bug fixes and stability improvements
+
+= 2.25.9 =
+* Security fixes
+* Bug fixes and stability improvements
+
 = 2.25.8 =
 * Security fixes
 * Ad placement enhancements
@@ -174,9 +181,3 @@ Yes, you have full control over ad categories and can block specific ads. The pl
 
 = 2.22.6 =
 * Reduce WordPress privacy config authentication callbacks and cache-miss request bursts
-
-= 2.22.5 =
-* Honor CCPA/GPP page suppression rules when directly injecting the consent script
-
-= 2.22.4 =
-* Bug fixes and improvements to User Targeting

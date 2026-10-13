@@ -13,17 +13,15 @@ class Ezoic_Integration_CURL_Response implements iEzoic_Integration_Response {
                 //$this->ez_headers = wp_remote_retrieve_headers( $response );
                 $this->alter_response_headers();
 
-                //Replace final content with ezoic content
-                if( is_array($response) && isset($response['body']) ) {
+                //Replace final content with ezoic content only if body is non-empty
+                if( is_array($response) && isset($response['body']) && strlen(trim($response['body'])) > 0 ) {
                     $final = $response['body'];
-                } else {
-                    $final = $response;
                 }
         } else {
             if( $response["error"] != NULL ) {
-                $final = $final . "<!-- " . $response["error"] . " -->";
+                $final = $final . "<!-- " . Ezoic_Integration_Request_Utils::escape_html_comment_text( $response["error"] ) . " -->";
             } elseif ($response["status_code"] != 200) {
-                $final = $final . "<!-- " . $response["status_code"] . " -->";
+                $final = $final . "<!-- " . Ezoic_Integration_Request_Utils::escape_html_comment_text( $response["status_code"] ) . " -->";
             }
         }
 
