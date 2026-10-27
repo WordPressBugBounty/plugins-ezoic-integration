@@ -1073,7 +1073,10 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			return false;
 		}
 
-		// Regex
+		if ( strpos( $test, '?' ) === false ) {
+			$url = explode( '?', $url, 2 )[0];
+		}
+
 		$excl_escaped = '#' . \preg_quote( $test, '#' ) . '$#';
 
 		return \preg_match( $excl_escaped, $url );
