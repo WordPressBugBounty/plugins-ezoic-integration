@@ -82,16 +82,11 @@ class Ezoic_AdsTxtManager extends Ezoic_Feature
 			if (file_exists($file_path)) {
 				require_once $file_path;
 
-				// Try to initialize with 'direct' method first to avoid FTP issues
-				$filesystem_result = WP_Filesystem('direct');
-
-				// If direct method fails, try default method
-				if (!$filesystem_result && empty($wp_filesystem)) {
-					WP_Filesystem();
-				}
-
-				// Log if filesystem still failed to initialize
-				if (empty($wp_filesystem)) {
+				// On hosts where PHP cannot write the site root, WP_Filesystem() picks FTP/SSH,
+				// fails to connect, returns false, and still leaves that unconnected instance in
+				// the global. Any call on it fatals, so drop it.
+				if (!WP_Filesystem()) {
+					$wp_filesystem = null;
 					Ezoic_Integration_Logger::log_debug("WordPress filesystem failed to initialize", 'AdsTxtManager');
 				}
 			}

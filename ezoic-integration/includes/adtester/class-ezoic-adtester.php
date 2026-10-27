@@ -872,6 +872,11 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			$should_insert = true;
 		} elseif ( $is_singular ) {
 			$should_insert = true;
+		} elseif ( $this->is_frontend_rest_post_request() ) {
+			if ( $this->is_rest_insertion_restricted() ) {
+				return $content;
+			}
+			$should_insert = true;
 		}
 
 		if ( ! $should_insert ) {
@@ -1022,14 +1027,8 @@ class Ezoic_AdTester extends Ezoic_Feature {
 
 		// If ad placement service integration is enabled, do not insert ads
 		// UNLESS JS integration with WP placeholders is enabled (then we still need to insert placeholders)
-		if ( $this->config->enable_adpos_integration ) {
-			$js_integration_enabled = get_option( 'ezoic_js_integration_enabled', false );
-			$js_options             = get_option( 'ezoic_js_integration_options', array() );
-			$use_wp_placeholders    = isset( $js_options['js_use_wp_placeholders'] ) && $js_options['js_use_wp_placeholders'];
-
-			if ( ! $js_integration_enabled || ! $use_wp_placeholders ) {
-				$this->do_insert = false;
-			}
+		if ( $this->adpos_integration_blocks_insertion() ) {
+			$this->do_insert = false;
 		}
 
 		if ( isset( $_POST['ez_wp_select_element'] ) ) {
@@ -1048,16 +1047,29 @@ class Ezoic_AdTester extends Ezoic_Feature {
 		}
 	}
 
-	private function is_current_url_excluded() {
+	private function adpos_integration_blocks_insertion() {
+		if ( empty( $this->config->enable_adpos_integration ) ) {
+			return false;
+		}
+
+		$js_integration_enabled = get_option( 'ezoic_js_integration_enabled', false );
+		$js_options             = get_option( 'ezoic_js_integration_options', array() );
+		$use_wp_placeholders    = isset( $js_options['js_use_wp_placeholders'] ) && $js_options['js_use_wp_placeholders'];
+
+		return ! $js_integration_enabled || ! $use_wp_placeholders;
+	}
+
+	private function is_current_url_excluded( $current_url = null ) {
 		if ( empty( $this->config->exclude_urls ) || ! is_array( $this->config->exclude_urls ) || ! function_exists( 'preg_match' ) ) {
 			return false;
 		}
 
-		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
-			return false;
+		if ( $current_url === null ) {
+			if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+				return false;
+			}
+			$current_url = $_SERVER['REQUEST_URI'];
 		}
-
-		$current_url = $_SERVER['REQUEST_URI'];
 		foreach ( $this->config->exclude_urls as $excl ) {
 			if ( $this->is_url_match( $current_url, $excl ) ) {
 				return true;
@@ -1200,12 +1212,16 @@ class Ezoic_AdTester extends Ezoic_Feature {
 
 		if ( $this->user_has_ads_disabled() ) {
 			if ( ! isset( $_COOKIE[ $cookieName ] ) || $_COOKIE[ $cookieName ] !== '1' ) {
-				setcookie( $cookieName, '1', 0, $cookiePath, $cookieDomain, $secure, true );
+				if ( ! headers_sent() ) {
+					setcookie( $cookieName, '1', 0, $cookiePath, $cookieDomain, $secure, true );
+				}
 			}
 			$_COOKIE[ $cookieName ] = '1';
 		} else {
 			if ( isset( $_COOKIE[ $cookieName ] ) && $_COOKIE[ $cookieName ] === '1' ) {
-				setcookie( $cookieName, '0', time() - 3600, $cookiePath, $cookieDomain, $secure, true );
+				if ( ! headers_sent() ) {
+					setcookie( $cookieName, '0', time() - 3600, $cookiePath, $cookieDomain, $secure, true );
+				}
 				$_COOKIE[ $cookieName ] = '0';
 			}
 		}
@@ -1229,11 +1245,49 @@ class Ezoic_AdTester extends Ezoic_Feature {
 			return false;
 		}
 
-		$currentUserRoles         = array_map( 'strtolower', wp_get_current_user()->roles );
+		return $this->roles_have_ads_disabled( wp_get_current_user()->roles );
+	}
+
+	private function roles_have_ads_disabled( $roles ) {
+		if ( empty( $roles ) || ! is_array( $roles ) || empty( $this->config->user_roles_with_ads_disabled ) ) {
+			return false;
+		}
+
+		$currentUserRoles         = array_map( 'strtolower', $roles );
 		$userRolesWithAdsDisabled = array_map( 'strtolower', $this->config->user_roles_with_ads_disabled );
 		$diff = array_diff( $currentUserRoles, $userRolesWithAdsDisabled );
 
 		return \count( $currentUserRoles ) != \count( $diff );
+	}
+
+	/**
+	 * initialize_page() never runs on REST requests, and REST drops the logged-in user when no
+	 * nonce is sent, so re-apply the page-level restrictions to the post being rendered.
+	 */
+	private function is_rest_insertion_restricted() {
+		if ( $this->adpos_integration_blocks_insertion() ) {
+			return true;
+		}
+
+		$post_id = \get_the_ID();
+		if ( $post_id ) {
+			$path = \wp_parse_url( (string) \get_permalink( $post_id ), PHP_URL_PATH );
+			if ( is_string( $path ) && $path !== '' && $this->is_current_url_excluded( $path ) ) {
+				return true;
+			}
+		}
+
+		if ( function_exists( 'wp_validate_auth_cookie' ) ) {
+			$cookie_user_id = \wp_validate_auth_cookie( '', 'logged_in' );
+			if ( $cookie_user_id ) {
+				$user = \get_userdata( $cookie_user_id );
+				if ( $user && isset( $user->roles ) && $this->roles_have_ads_disabled( $user->roles ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -1481,6 +1535,36 @@ class Ezoic_AdTester extends Ezoic_Feature {
 
 	private function is_frontend_page_request() {
 		return ! is_admin() && ! is_feed() && ! wp_doing_ajax();
+	}
+
+	/**
+	 * REST responses have no loop or singular query. A same-site browser GET of one post in
+	 * view context is the site's own front end appending that post (infinite scroll), so it
+	 * gets placeholders like a normal post. Editors, apps and server-side consumers do not
+	 * send Sec-Fetch-Site: same-origin. ezoic_rest_content_placeholders overrides the result.
+	 */
+	private function is_frontend_rest_post_request() {
+		if ( ! defined( 'REST_REQUEST' ) || ! REST_REQUEST ) {
+			return false;
+		}
+
+		$route = '';
+		if ( isset( $GLOBALS['wp'] ) && is_object( $GLOBALS['wp'] ) && isset( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+			$route = (string) $GLOBALS['wp']->query_vars['rest_route'];
+		} elseif ( isset( $_GET['rest_route'] ) && is_string( $_GET['rest_route'] ) ) {
+			$route = $_GET['rest_route'];
+		}
+
+		$method  = isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : '';
+		$context = isset( $_GET['context'] ) && is_string( $_GET['context'] ) ? $_GET['context'] : 'view';
+		$fetch   = isset( $_SERVER['HTTP_SEC_FETCH_SITE'] ) ? $_SERVER['HTTP_SEC_FETCH_SITE'] : '';
+
+		$is_frontend = $method === 'GET'
+			&& $context === 'view'
+			&& $fetch === 'same-origin'
+			&& preg_match( '#^/wp/v2/posts/\d+/?$#', $route ) === 1;
+
+		return (bool) \apply_filters( 'ezoic_rest_content_placeholders', $is_frontend );
 	}
 
 	/**

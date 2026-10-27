@@ -67,7 +67,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 			$file_exists = @$wp_filesystem->exists($filePath);
 			$file_readable = $file_exists ? @$wp_filesystem->is_readable($filePath) : false;
 			$file_writable = $file_exists ? @$wp_filesystem->is_writable($filePath) : false;
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			$message = "Error accessing .htaccess file: " . $e->getMessage() . ". Please check your server configuration or contact your hosting provider.";
 			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
 			$adstxtmanager_status['message'] = $message;
@@ -112,7 +112,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 
 		try {
 			$content = @$wp_filesystem->get_contents($filePath);
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			$message = "Error reading .htaccess file: " . $e->getMessage() . ". Please check your server configuration or contact your hosting provider.";
 			$adstxtmanager_status = Ezoic_AdsTxtManager::ezoic_adstxtmanager_status(true);
 			$adstxtmanager_status['message'] = $message;
@@ -148,7 +148,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 			if (!$success) {
 				$message = "Unable to update your .htaccess file for ads.txt redirect. Please check file permissions or contact your hosting provider.";
 			}
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			$message = "Error writing to .htaccess file: " . $e->getMessage() . ". Please check your server configuration or contact your hosting provider.";
 		}
 
@@ -184,7 +184,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 			if ($file_exists === null) {
 				$file_exists = false;
 			}
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error during .htaccess cleanup: " . $e->getMessage(), 'AdsTxtManager');
 			return;
 		}
@@ -195,7 +195,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 
 		try {
 			$content = @$wp_filesystem->get_contents($filePath);
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error reading .htaccess during cleanup: " . $e->getMessage(), 'AdsTxtManager');
 			return;
 		}
@@ -230,7 +230,7 @@ class Ezoic_AdstxtManager_Htaccess_Modifier implements iAdsTxtManager_Solution
 			if (!$success) {
 				Ezoic_Integration_Logger::log_error("Failed to write modified .htaccess file", 'AdsTxtManager');
 			}
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error writing .htaccess during cleanup: " . $e->getMessage(), 'AdsTxtManager');
 		}
 	}

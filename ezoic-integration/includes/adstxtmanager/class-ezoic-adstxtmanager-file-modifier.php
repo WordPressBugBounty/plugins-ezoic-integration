@@ -50,7 +50,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 		// Safely check if file exists with error handling
 		try {
 			$file_exists = @$wp_filesystem->exists($filePath);
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			$redirect_result = array('status' => false, 'error' => 'filesystem_error', 'message' => 'Error accessing ads.txt file: ' . $e->getMessage() . '. Please check your server configuration or contact your hosting provider.');
 			update_option('ezoic_adstxtmanager_status', $redirect_result);
 			return;
@@ -79,7 +79,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 					$is_writable = @$wp_filesystem->is_writable($filePath);
 					$dir_writable = @$wp_filesystem->is_writable(dirname($filePath));
 				}
-			} catch (\Exception $e) {
+			} catch (\Throwable $e) {
 				$renameSuccess = false;
 				$is_writable = false;
 				$dir_writable = false;
@@ -135,7 +135,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 		// Safely check if file exists with error handling
 		try {
 			$file_exists = @$wp_filesystem->exists($modifiedFilePath);
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error during ads.txt teardown: " . $e->getMessage(), 'AdsTxtManager');
 			return;
 		}
@@ -146,7 +146,7 @@ class Ezoic_AdsTxtManager_File_Modifier implements iAdsTxtManager_Solution
 
 		try {
 			$renameSuccess = @$wp_filesystem->move($modifiedFilePath, $origFilePath);
-		} catch (\Exception $e) {
+		} catch (\Throwable $e) {
 			Ezoic_Integration_Logger::log_exception("Filesystem error moving ads.txt file: " . $e->getMessage(), 'AdsTxtManager');
 			return;
 		}
