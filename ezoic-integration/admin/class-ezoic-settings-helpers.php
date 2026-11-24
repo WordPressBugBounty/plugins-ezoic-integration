@@ -198,7 +198,6 @@ class Ezoic_Settings_Helpers {
 
 		// Check for WPEngine hosting compatibility issues
 		$options = get_option( 'ezoic_integration_status' );
-		/** @phpstan-ignore-next-line */
 		if ( function_exists( 'is_wpe' ) ) {
 			if ( \is_wpe() && ( isset( $options['integration_type'] ) && $options['integration_type'] == 'wp' ) ) {
 				$hosting_issue = true;

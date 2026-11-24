@@ -18,7 +18,7 @@ namespace Ezoic_Namespace;
  * Plugin Name:       Ezoic
  * Plugin URI:        https://ezoic.com/
  * Description:       Easily integrate and connect with Ezoic using WordPress. In order to activate this plugin properly you will need an Ezoic account. You can create an account here: https://pubdash.ezoic.com/join
- * Version:           2.25.12
+ * Version:           2.25.13
  * Requires PHP:      7.4
  * Author:            Ezoic Inc.
  * Author URI:        https://ezoic.com/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 
 if ( ! defined( 'EZOIC_INTEGRATION_VERSION' ) ) {
-	define( 'EZOIC_INTEGRATION_VERSION', '2.25.12' ); // also update version in 'class-ezoic-integration-factory.php'.
+	define( 'EZOIC_INTEGRATION_VERSION', '2.25.13' ); // also update version in 'class-ezoic-integration-factory.php'.
 }
 define( 'EZOIC__PLUGIN_NAME', 'Ezoic' );
 define( 'EZOIC__PLUGIN_SLUG', dirname( plugin_basename( __FILE__ ) ) );
@@ -71,7 +71,7 @@ if ( ! defined( 'EZOIC__DISABLE_JS' ) ) {
 	define( 'EZOIC__DISABLE_JS', isset( $_GET['ez_js_disable'] ) && $_GET['ez_js_disable'] == '1' );
 }
 
-if ( ! defined( 'EZOIC__DISABLE__FEATURE' ) && isset( $_GET['ez_wp_disable_feature'] ) ) {
+if ( ! defined( 'EZOIC__DISABLE__FEATURE' ) && isset( $_GET['ez_wp_disable_feature'] ) && is_string( $_GET['ez_wp_disable_feature'] ) ) {
 	define( 'EZOIC__DISABLE__FEATURE', array_filter( explode( ',', $_GET['ez_wp_disable_feature'] ) ) );
 }
 

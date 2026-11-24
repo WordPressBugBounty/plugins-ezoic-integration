@@ -238,7 +238,9 @@ namespace Ezoic_Namespace {
 
 			// We need to make sure that caching is not enabled while a pub is using a cloud integration. If the request is
 			// coming from a cloud integrated site, we turn caching off and clean up any cache files and modifications.
-			$plugin_settings->handle_cloud_integrated_with_caching($plugin_admin);
+			add_action('admin_init', function () use ($plugin_settings, $plugin_admin) {
+				$plugin_settings->handle_cloud_integrated_with_caching($plugin_admin);
+			});
 
 			$this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_styles');
 			$this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts');

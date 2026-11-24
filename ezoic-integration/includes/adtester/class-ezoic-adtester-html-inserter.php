@@ -234,11 +234,12 @@ class Ezoic_AdTester_HTML_Inserter extends Ezoic_AdTester_Inserter
 			$doc = \phpQuery::newDocument($body_content);
 			$content = $doc;
 		} catch (\Exception $e) {
+			\libxml_use_internal_errors(false);
 			Ezoic_Integration_Logger::log_error(
 				"HTML insertion failed - phpQuery parsing error: " . $e->getMessage(),
 				'HTML Ads'
 			);
-			return $body_tag_matches[0] . $body_tag_matches[1] . $body_content;
+			return $content;
 		}
 		\libxml_use_internal_errors(false);
 

@@ -31,7 +31,7 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		$loader->add_action( 'publish_post', $this, 'ezoic_cdn_published', 10, 2 );
 		$loader->add_action( 'publish_page', $this, 'ezoic_cdn_published', 10, 2 );
 		$loader->add_action( 'transition_post_status', $this, 'ezoic_cdn_handle_post_transition', 10, 3 );
-		$this->register_post_delete_hooks( $loader );
+		$this->register_post_change_hooks( $loader );
 
 		// Comment-related hooks
 		$loader->add_action( 'comment_post', $this, 'ezoic_handle_new_comment', 100, 3 );
@@ -44,16 +44,17 @@ class Ezoic_Cdn extends Ezoic_Feature {
 		$loader->add_action( 'ezoic_purge_post', $this, 'ezoic_cdn_purge_post_hook', 10, 1 );
 	}
 
-	// Public and admin hooks register on disjoint requests, so deletes from REST, WP-CLI and cron need both.
-	private function register_post_delete_hooks( $loader ) {
+	// Public and admin hooks register on disjoint requests, so edits and deletes from REST
+	// (block editor), WP-CLI and cron need both.
+	private function register_post_change_hooks( $loader ) {
+		$loader->add_action( 'post_updated', $this, 'ezoic_cdn_post_updated', 10, 3 );
 		$loader->add_action( 'before_delete_post', $this, 'ezoic_cdn_cache_post_before_delete', 10, 1 );
 		$loader->add_action( 'after_delete_post', $this, 'ezoic_cdn_post_deleted', 100, 2 );
 	}
 
 	public function register_admin_hooks( $loader ) {
 		// Post-related hooks
-		$loader->add_action( 'post_updated', $this, 'ezoic_cdn_post_updated', 10, 3 );
-		$this->register_post_delete_hooks( $loader );
+		$this->register_post_change_hooks( $loader );
 
 		// Comment-related hooks
 		$loader->add_action( 'edit_comment', $this, 'ezoic_cdn_edit_comment', 100, 2 );

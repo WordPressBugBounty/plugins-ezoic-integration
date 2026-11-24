@@ -78,6 +78,11 @@ class Ezoic_AdTester_PublisherAds
 	public $revenues = array();
 	public $adpos_service = null;
 
+	// True only when the backend returned a usable placeholder payload. Callers
+	// must not treat an empty $ads as "the publisher has no placeholders" when
+	// this is false; the request failed and the local config is still current.
+	public $fetched = false;
+
 	/**
 	 * Initializes the list via a back-channel call to the backend systems
 	 */
@@ -123,12 +128,13 @@ class Ezoic_AdTester_PublisherAds
 		// Deserialize response
 		$deserialized = json_decode($body);
 
-		if (!$deserialized) {
+		if (!\is_object($deserialized) || !isset($deserialized->placeholders) || !\is_array($deserialized->placeholders)) {
 			return;
 		}
 
 		// Initialize $ads
 		$this->set($deserialized);
+		$this->fetched = true;
 	}
 
 	/**
@@ -150,17 +156,21 @@ class Ezoic_AdTester_PublisherAds
 				}
 
 				// Deserialize default configuration
-				foreach ($data->defaultConfiguration as $config) {
-					$this->default_config[] = array(
-						"page_type"			=> $config->pageType,
-						"name"				=> $config->name,
-						"position_type"		=> $config->positionType,
-						"display"			=> $config->display,
-						"display_option"	=> $config->displayOption
-					);
+				if (isset($data->defaultConfiguration) && \is_array($data->defaultConfiguration)) {
+					foreach ($data->defaultConfiguration as $config) {
+						$this->default_config[] = array(
+							"page_type"			=> $config->pageType,
+							"name"				=> $config->name,
+							"position_type"		=> $config->positionType,
+							"display"			=> $config->display,
+							"display_option"	=> $config->displayOption
+						);
+					}
 				}
 
-				$this->placeholders_created = $data->placeholdersCreated;
+				if (isset($data->placeholdersCreated)) {
+					$this->placeholders_created = $data->placeholdersCreated;
+				}
 			}
 
 			// Deserialize revenues

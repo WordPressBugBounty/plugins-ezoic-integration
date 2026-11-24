@@ -337,6 +337,13 @@ class Ezoic_AdTester extends Ezoic_Feature {
 		// Fetch placeholders from backend
 		$publisher_ads = new Ezoic_AdTester_PublisherAds();
 
+		// A failed fetch yields an empty ad list; reconciling against it would
+		// drop every active placement and its page rules, so keep the stored config.
+		if ( ! $publisher_ads->fetched ) {
+			self::log( 'Placeholder fetch failed; keeping existing placement configuration' );
+			return;
+		}
+
 		// Ensure placeholder_config is an array before iterating
 		if ( ! isset( $this->config->placeholder_config ) || ! is_array( $this->config->placeholder_config ) ) {
 			$this->config->placeholder_config = array();

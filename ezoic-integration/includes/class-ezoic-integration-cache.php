@@ -107,7 +107,7 @@ class Ezoic_Integration_Cache implements iEzoic_Integration_Cache {
 	 */
 	public function get_active_template_cookie() {
 		foreach ($_COOKIE as $key => $val) {
-			if (strpos($key, 'active_template') !== false) {
+			if (strpos($key, 'active_template') !== false && is_string($val)) {
 					$parts = explode('.', $val);
 					return $parts[0];
 			}

@@ -31,33 +31,27 @@ class Ezoic_Integration_Compatibility_Check
 	static $known_incompatible_plugins = array(
 		'Accelerated Mobile Pages' => array(
 			'versions' => 'all',
-			'message' => 'Must disable this plugin and can use another AMP plugin for conflict-free mobile site and monetization.',
-			'allow_install' => true
+			'message' => 'Must disable this plugin and can use another AMP plugin for conflict-free mobile site and monetization.'
 		),
 		'Ads.txt Manager' => array(
 			'versions' => 'all',
-			'message'  => 'For WordPress integration, we recommend disabling this plugin and using our <a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=adstxtmanager_settings">Ads.txt Manager</a> setup.',
-			'allow_install' => true
+			'message'  => 'For WordPress integration, we recommend disabling this plugin and using our <a href="?page=' . EZOIC__PLUGIN_SLUG . '&tab=adstxtmanager_settings">Ads.txt Manager</a> setup.'
 		),
 		'AMP' => array(
 			'versions' => 'all',
-			'message' => 'Must disable this plugin and can use another AMP plugin for conflict-free mobile site and monetization.',
-			'allow_install' => true
+			'message' => 'Must disable this plugin and can use another AMP plugin for conflict-free mobile site and monetization.'
 		),
 		/*'Wordfence Security' => array(
 			'versions' => 'all',
-			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.',
-			'allow_install' => true
+			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.'
 		),
 		'Wordfence Login Security' => array(
 			'versions' => 'all',
-			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.',
-			'allow_install' => true
+			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.'
 		),
 		'Wordfence Assistant' => array(
 			'versions' => 'all',
-			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.',
-			'allow_install' => true
+			'message' => 'Please disable this plugin or contact Wordfence to whitelist Ezoic IPs to avoid Origin Error (if Ezoic IPs are already whitelisted, you can ignore this message). For more information on Origin Error, please visit <a target="_blank" rel="noopener noreferrer" href="https://support.ezoic.com/kb/article/how-to-fix-origin-errors">support.ezoic.com/kb/article/how-to-fix-origin-errors</a>.'
 		),*/
 		'Swift Performance Lite' => array(
 			'versions' => 'all',
@@ -113,18 +107,12 @@ class Ezoic_Integration_Compatibility_Check
 		$active_plugins       = self::get_active_plugins();
 		$incompatible_plugins = array();
 
-		// incompatible with wordpress integration
-		if (Ezoic_Integration_Admin::is_wordpress_integrated()) {
+		// WP-integration conflicts never block activation: the stored integration
+		// status can be stale from an earlier install, which blocked JS-integrated
+		// sites. The settings page still lists them for WP-integrated sites.
+		if (!$activation && Ezoic_Integration_Admin::is_wordpress_integrated()) {
 			foreach ($active_plugins as $filename => $plugin) {
 				if (self::is_in_plugins_list($plugin, self::$known_incompatible_plugins)) {
-					if (
-						$activation
-						&& isset(self::$known_incompatible_plugins[$plugin['name']]['allow_install'])
-						&& self::$known_incompatible_plugins[$plugin['name']]['allow_install'] == true
-					) {
-						// skip activation wp_die()
-						continue;
-					}
 					$plugin['message']  = self::$known_incompatible_plugins[$plugin['name']]['message'];
 					$plugin['filename'] = $filename;
 					array_push($incompatible_plugins, $plugin);

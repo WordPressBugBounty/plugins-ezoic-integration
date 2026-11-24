@@ -282,7 +282,7 @@ class Ezoic_Integration_Form_Handler
 	 */
 	public function handle_cloud_integrated_with_caching($plugin_admin)
 	{
-		if (!is_admin() || !$plugin_admin->is_cloud_integrated()) {
+		if (!is_admin() || !current_user_can('manage_options') || !$plugin_admin->is_cloud_integrated()) {
 			return;
 		}
 
@@ -294,7 +294,6 @@ class Ezoic_Integration_Form_Handler
 		$new_options = $old_options;
 		$new_options['caching'] = 0;
 		\update_option('ezoic_integration_options', $new_options);
-		$this->handle_update_ezoic_integration_options($old_options, $new_options);
 	}
 
 	/**
